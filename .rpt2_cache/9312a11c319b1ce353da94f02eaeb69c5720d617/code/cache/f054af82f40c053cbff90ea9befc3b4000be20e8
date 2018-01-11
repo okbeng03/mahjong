@@ -1,0 +1,1 @@
+{"code":"import manager from './manager';\r\nimport './tile';\r\nmanager(1);\r\n//# sourceMappingURL=main.js.map","map":{"version":3,"file":"main.js","sourceRoot":"","sources":["src/main.ts"],"names":[],"mappings":"AAAA,OAAO,OAAO,MAAM,WAAW,CAAC;AAChC,OAAO,QAAQ,CAAC;AAEhB,OAAO,CAAC,CAAC,CAAC,CAAC"},"dts":{"name":"/Users/okbeng/git/mahjong/main.d.ts","text":"import './tile';\r\n"}}

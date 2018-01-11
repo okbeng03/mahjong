@@ -1,0 +1,39 @@
+{
+  "name": "mahjong",
+  "version": "0.0.1",
+  "description": "mahjong",
+  "main": "dist/mahjong.js",
+  "scripts": {
+    "dev": "rollup -wm -c build/rollup.dev.config.js",
+    "build": "npm run build:main && npm run build:logger",
+    "lint": "eslint src test",
+    "test": "npm run lint && npm run test:types && npm run test:unit && npm run test:ssr && npm run test:e2e",
+    "test:unit": "./node_modules/.bin/mocha --watch --compilers ts:ts-node/register ./test/*.spec.ts",
+    "test:types": "tsc -p types/test",
+    "release": "bash build/release.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/okbeng03/mahjong.git"
+  },
+  "author": "changbin.wangcb",
+  "bugs": {
+    "url": "https://github.com/okbeng03/mahjong/issues"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "chai": "^4.1.2",
+    "mocha": "^4.1.0",
+    "rewire": "^3.0.2",
+    "rollup-plugin-babel": "^3.0.3",
+    "rollup-plugin-commonjs": "^8.2.6",
+    "rollup-plugin-node-resolve": "^3.0.0",
+    "rollup-plugin-typescript2": "^0.9.0",
+    "ts-node": "^4.1.0",
+    "typescript": "^2.6.2"
+  },
+  "dependencies": {
+    "@types/lodash": "^4.14.91",
+    "lodash": "^4.17.4"
+  }
+}
