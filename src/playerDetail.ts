@@ -1,3 +1,4 @@
+import * as _ from 'lodash';
 import Player from './player';
 import { MeldDetail } from './meld';
 import Wall from './wall';
@@ -9,12 +10,19 @@ export default class PlayerDetail extends Player {
   flowerTiles: number[];  // 花牌
   chowTiles: MeldDetail[];  // 吃的牌
   wall: Wall;
-  readyHand: boolean; // 是否听牌
+  readyHand: _.Dictionary<number[]>; // 听的牌
+  canWin: boolean;  // 是否胡牌
+  eye: number[][];  // 将牌
+  remainTiles: number[];  // 没成组的牌
 
   constructor(id: number, name: string, pick: number, wall: Wall) {
     super(id, name, pick);
 
     this.wall = wall;
+    this.eye = [];
+    this.remainTiles = [];
+    this.canWin = false;
+    this.readyHand = {};
   }
 
   // 起牌

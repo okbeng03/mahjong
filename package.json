@@ -4,6 +4,7 @@
   "description": "mahjong",
   "main": "dist/mahjong.js",
   "scripts": {
+    "build:data": "node ./src/table/index.js",
     "dev": "rollup -wm -c build/rollup.dev.config.js",
     "build": "npm run build:main && npm run build:logger",
     "lint": "eslint src test",

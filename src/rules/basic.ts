@@ -1,408 +1,236 @@
 // 基础规则
 import * as _ from 'lodash';
+import Player from '../playerDetail';
 import { Meld } from '../meld';
 import { Card, ClaimType, sortTiles } from '../tile';
+import { assembly, eyeAssembly } from '../table/data';
 
-interface WinCard {
-  sole: number,
-  tiles: number[]
-};
+// 检查是否胡牌
+export function canWin(player: Player): boolean {
+  const tiles = sortTiles(player.handTiles);
+  const remainTiles = checkMelds(tiles, player);
+  player.canWin = !!remainTiles.length;
 
-export function readyHand(tiles: number[]): boolean {
-  tiles = sortTiles(tiles);
-  const groups = groupBy(tiles);
-  const orderGroups = getOrderGroup(tiles);
-  const soleTiles: number[] = checkSoleTiles(groups, orderGroups);
+  return player.canWin;
+}
 
-  if (soleTiles.length > 2) {
-    return false;
+// 检查是否可以听牌
+export function canReadyHand(player: Player): void {
+  const tiles = sortTiles(player.handTiles);
+  const remainTiles = checkMelds(tiles, player);
+
+  // 找出剩余的牌
+  if (remainTiles.length) {
+    // 找出是否可以听牌、听什么牌
+    player.remainTiles = remainTiles;
+    checkReadyHand(player);
   }
+}
 
-  const pairs: number[][] = []; // 保存成组的牌
-  let melds: Meld[] = []; // 保存对子
-  
-  // 找出大字是不是能凑成组
-  checkWordTiles(groups, melds, pairs);
+// 检查牌成组的牌
+function checkMelds(tiles: number[], player?: Player): number[] {
+  const orderGroups = groupByOrder(tiles, 1);
+  let remainTiles: number[] = [];
 
-  // 找出剩余单排，是不是能凑成组
-  checkSingleTile(groups, orderGroups, melds, pairs);
-
-  // 检查剩余可能成组的数字牌
-  let numberalMelds: Meld[] = checkCertainMelds(groups, orderGroups);
-
-  if (numberalMelds.length) {
-    melds = melds.concat(numberalMelds);
-  }
-
-  // 检查听的牌
-  let leftTiles: number[] = [];
   orderGroups.forEach(function(group) {
-    if (group.length) {
-      leftTiles = leftTiles.concat(group);
+    const len = group.length;
+    const remainder = len % 3;
+
+    if (remainder === 0 || remainder === 2) {
+      const size = groupSize(group);
+      const table = remainder === 2 ? eyeAssembly[len] : assembly[len];
+
+      if (_.indexOf(table, size) === -1) {
+        remainTiles = remainTiles.concat(group);
+        return;
+      }
+
+      // 找出将
+      if (remainder === 2 && player) {
+        player.eye.push(getEye(group, size));
+      }
+    } else {
+      remainTiles = remainTiles.concat(group);
     }
   });
-  let leftOrderGroups = groupByOrder(leftTiles, 2);
-  let pLen = pairs.length;
-  let sLen = soleTiles.length;
-  let gLen = leftOrderGroups.length;
 
-  // 长度超过两个，不可能听牌
-  // if (pLen + sLen + gLen > 2) {
-  //   return false;
-  // }
+  return remainTiles;
+}
 
-  // 胡牌了
-  if (pLen === 1 && !sLen && !gLen) {
-    return true;
-  }
+// 找出是否可以听牌，听什么牌 
+function checkReadyHand(player: Player): void {
+  const remainTiles = player.remainTiles;
+  const eye = player.eye;
+  const len = remainTiles.length;
+  const eyeLen = eye.length;
 
-  // 有可能叫牌
-  let winCards: WinCard[] = [];
-
-  // 只有单排，单调
-  if (sLen === 2) {
-    soleTiles.forEach(function(tile, i) {
-      winCards.push({
-        sole: tile,
-        tiles: [soleTiles[1 - i]]
-      });
-    });
-  }
-
-  // 两对子，出单排，对碰
-  if (pLen === 2) {
-    if (sLen === 1 && !gLen) {
-      winCards.push({
-        sole: soleTiles[0],
-        tiles: [pairs[0][0], pairs[1][0]]
-      });
+  if (len === 1) {
+    if (eyeLen === 2) {
+      // 对碰
+      player.readyHand[remainTiles[0]] = [eye[0][0], eye[1][0]];
     }
 
-    // 找单排4，7，10
-    if (gLen === 1 && !sLen) {
+    // if (eyeLen === 5) {
+    //   // 不可能听牌，不考虑
+    //   // 豪华七小对
+    // }
 
-    }
+    return;
   }
 
-  // 只要有未成组，都要找最合适的组合
+  if (len === 2) {
+    if (!eyeLen) {
+      // 单吊
+      player.readyHand[remainTiles[0]] = [remainTiles[1]];
+      player.readyHand[remainTiles[1]] = [remainTiles[0]];
+    }
 
-  // 
+    // if (eyeLen === 3) {
+    //   // 不可能听牌，不考虑
+    // }
 
-  // 1单排 + 1未成组，出单排
-  if (sLen === 1 && gLen === 1) {
+    // if (eyeLen === 6) {
+    //   // 七小对
+    // }
 
-  }  
+    return;
+  }
 
-  // 七小对
+  // 复杂的来了
+  // 只能存在两种类型的牌，并且还要能和其他可连续
+  let typeGroups = groupByType(remainTiles);
+  const wordTiles = typeGroups.word;
 
-  return true;
-};
+  // 大字超过两个，而且不是最后两个，不可能听牌
+  if ( wordTiles && wordTiles.length >= 2) {
+    return;
+  }
 
-// 检查剩余可能成组的数字牌
-function checkCertainMelds(groups: _.Dictionary<number[]>, orderGroups: number[][]): Meld[] {
-  let melds: Meld[] = [];
+  // 超过两个类型的不成组牌，不可能听牌
+  const typeKeys = Object.keys(typeGroups);
+  if (typeKeys.length > 2) {
+    return;
+  }
 
-  orderGroups.forEach(function(orderGroup) {
-    if (!orderGroup.length) {
+  // 把同花色的牌一起拿出来比较，这样找才全
+  const tiles = player.handTiles;
+  typeGroups = groupByType(tiles);
+  let partTiles: number[][] = [];
+
+  typeKeys.forEach(function(type) {
+    if (type === 'word') {
       return;
     }
 
-    let tiles: number[] = concatOrder(groups, orderGroup);
-
-    // 找出这个顺序牌总共有多少牌，能不能成为3的倍数，能可能成组，否则不能成组
-    if (tiles.length % 3 > 0) {
-      return;
-    }
-  
-    // 先找出能成组的
-    // 找连续的成组
-    let sequenceGroups: number[][] = groupByOrder(orderGroup, 1);
-    let tempMelds: Meld[] = []; // 临时成组
-    let flag = true;
-    checkSingleTile(groups, sequenceGroups, tempMelds);    
-
-    sequenceGroups.forEach(function(group) {
-      let len = group.length;
-
-      if (!len) {
-        flag = false;
-        return;
-      }
-
-      let tiles: number[] = concatOrder(groups, group);
-
-      if (tiles.length % 3 > 0) {
-        flag = false;
-        return;
-      }
-
-      let leastTwoTiles: number[] = [];
-      let leastThreeTiles: number[] = [];
-
-      group.forEach(function(tile) {
-        let groupTiles = groups[tile];
-
-        // 检查有没有2个以上的，这个待会会重点检查，没有2个以上，那必须是顺子
-        if (groupTiles.length > 1) {
-          leastTwoTiles.push(tile);
-        } 
-        if (groupTiles.length > 2) {
-          leastThreeTiles.push(tile);
-        }
-      });
-
-      // 没有2个以上，必然是顺子
-      if (!leastTwoTiles.length) {
-        _.chunk(group, 3).forEach(function(tiles) {
-          tempMelds.push({
-            tiles: tiles,
-            type: ClaimType.Chow
-          });
-        });
-
-        return;
-      }
-
-      // 都是碰子
-      if (leastThreeTiles.length === len) {
-        _.chunk(tiles, 3).forEach(function(tiles) {
-          tempMelds.push({
-            tiles: tiles,
-            type: ClaimType.Pong
-          });
-        });
-
-        return;
-      }
-
-      // 非上面两种情况的，最起码成两组，最多4组
-      // 223344
-      // 左右都是对子，必须都成对子
-      // 左右只要是三个，先成碰子
-      // 有四个的，只取3
-      // 左边是对子，接下来两个必须是对子
-      if (len >= 3) {
-        let meldList: Meld[] = [];
-
-        while(group.length && flag) {
-          let tempGroups: _.Dictionary<number[]> = groupBy(tiles);
-          let left = _.take(group)[0];
-          let leftTiles = tempGroups[left];
-          let lLen = leftTiles.length;
-
-          if (lLen >= 3) {
-            meldList.push({
-              tiles: [left, left, left],
-              type: ClaimType.Pong
-            });
-
-            tiles.splice(0, 3);
-
-            if (lLen === 4) {
-              lLen = 1;
-            } else {
-              group.splice(0, 1);
-              continue;
-            }
-          }
-
-          if (lLen === 1) {
-            let meld = canChow(group, left);
-
-            if (meld.length) {
-              let meldTiles = meld[0].tiles;
-              meldTiles = sortTiles(meldTiles);
-              meld[0].tiles = meldTiles;
-              meldList = meldList.concat(meld);
-              
-              let i = 1
-
-              for (; i < 3; i++) {
-                if (tempGroups[group[i]].length > 1) {
-                  break;
-                }
-              }
-
-              group.splice(0, i);
-              meldTiles.forEach(function(tile) {
-                tiles.splice(_.indexOf(tiles, tile), 1);
-              });
-            } else {
-              flag = false;
-              return;
-            }
-          }
-
-          if (lLen === 2) {
-            let _flag = true;
-            let size = 3;
-
-            for (let i = 2; i >= 1; i--) {
-              let tile = group[i];
-
-              if (tempGroups[tile].length < 2) {
-                _flag = false;
-                break;
-              }
-
-              if (tempGroups[tile].length > 2)  {
-                size = i + 1;
-              }
-            }
-
-            if (_flag) {
-              let meld = {
-                tiles: [left, left + 1, left + 2],
-                type: ClaimType.Chow
-              };
-
-              meldList.push(meld);
-              meldList.push(meld);
-
-              tiles.splice(0, 6);
-              group.splice(0, size);
-            } else {
-              flag = _flag;
-              return;
-            }
-          }
-        }
-
-        if (flag) {
-          tempMelds = tempMelds.concat(meldList);
-        }
-
-        return;
-      }
-
-      flag = false;
-    });
-
-    if (flag) {
-      melds = melds.concat(tempMelds);
-      orderGroup.length = 0;
-    }
+    partTiles.push(typeGroups[type]);
   });
 
-  return melds;
+  // 如果有大字，肯定打大字才能听牌
+  if (wordTiles) {
+    partTiles.unshift(wordTiles);
+  }
+
+  player.readyHand = checkTing(partTiles);
 }
 
-// 去掉确定成组的组
-function excludeGroup(groups: _.Dictionary<number[]>, group: number[]): void {
-  group.forEach(function(tile) {
-    delete groups[tile];
-  });
+// 检查出一张牌，抓什么牌可以成组
+function checkTing(tileGroup: number[][]): _.Dictionary<number[]> {
+  const readyHand: _.Dictionary<number[]> = {};
+  const gLen = tileGroup.length;
 
-  group.length = 0;
-}
+  // 只有一个组，尝试打出每一张牌，剩下的牌抓一张能不能成组
+  if (gLen === 1) {
+    const tiles = tileGroup[0];
+    let last = 0;
 
-// 检查大字
-function checkWordTiles(groups: _.Dictionary<number[]>, melds: Meld[], pairs: number[][]): void {
-  for (let key in groups) {
-    if (parseInt(key) >= Card.East) {
-      const tiles = groups[key];
-      const len = tiles.length;
+    for (let i = 0, len = tiles.length; i < len; i++) {
+      const newTiles = tiles.slice();
+      const tile = newTiles.splice(i, 1);
 
-      if (len === 2) {
-        pairs.push(tiles);
-      } else {
-        melds.push({
-          tiles: tiles,
-          type: len === 3 ? ClaimType.Pong : ClaimType.Kong
-        });
+      if (tile[0] === last) {
+        continue;
       }
 
-      delete groups[key];
+      const tingTiles = canTing(newTiles);
+
+      if (tingTiles.length) {
+        readyHand[tile[0]] = tingTiles;
+      }
     }
   }
-}
 
-// 找出剩余的单排，是不是能凑成组
-function checkSingleTile(groups: _.Dictionary<number[]>, orderGroups: number[][], melds: Meld[], pairs?: number[][]): void {
-  orderGroups.forEach(function(group) {
-    if (group.length === 1) {
-      const tiles = groups[group[0]];
-      const len = tiles.length;
+  // 两个组，判断哪组花色可以出，哪组花色可以抓
+  if (gLen === 2) {
+    const groups: number[][][] = [];  // [[[去掉的牌], [增加的牌]]]
+    const group1 = tileGroup[0];
+    const group2 = tileGroup[1];
+    const group1Len = group1.length;
+    const group2Len = group2.length;
 
-      if (pairs && len === 2) {
-        pairs.push(tiles);
-        group.length = 0;
-      } else {
-        melds.push({
-          tiles: tiles,
-          type: len === 3 ? ClaimType.Pong : ClaimType.Kong
-        });
-        group.length = 0;
+    if (group1[0] >= Card.East) {
+      // 如果有大字，肯定打大字才能听牌
+      groups.push(tileGroup)
+    } else {
+      if (remain02(group1Len - 1) && remain02(group2Len + 1)) {
+        groups.push([group1, group2]);
+      }
+
+      if (remain02(group2Len - 1) && remain02(group1Len + 1)) {
+        groups.push([group2, group1]);
       }
     }
-  });
-}
 
-// 检查不可能成组的牌
-function checkSoleTiles(groups: _.Dictionary<number[]>, orderGroups: number[][]): number[] {
-  const soleTiles: number[] = [];
+    groups.forEach(function(group) {
+      const tiles = group[0];
+      let last = 0;
 
-  // 数字牌
-  orderGroups.forEach(function(group) {
-    if (group.length === 1 && groups[group[0]].length === 1) {
-      soleTiles.push(group[0]);
-      excludeGroup(groups, group);
-    }
-  });
+      // 先看移除掉的组是否能成牌，能成牌才加牌
+      for (let i = 0, len = tiles.length; i < len; i++) {
+        const newTiles = tiles.slice();
+        const tile = newTiles.splice(i, 1);
 
-  // 大字
-  const keys = Object.keys(groups);
-  const idx = _.findIndex(keys, function(key) {
-    return parseInt(key) >= Card.East;
-  });
+        if (tile[0] === last) {
+          continue;
+        }
 
-  if (idx > -1) {
-    keys.slice(idx).forEach(function(key) {
-      if (groups[key].length === 1) {
-        soleTiles.push(parseInt(key));
-        delete groups[key];
+        const remainTiles = checkMelds(newTiles);
+
+        if (!remainTiles.length) {
+          const tingTiles = canTing(group[1]);
+
+          if (tingTiles) {
+            readyHand[tile[0]] = tingTiles;
+          }
+        }
       }
     });
   }
 
-  return soleTiles;
+  return readyHand;
 }
 
-function getOrderGroup(tiles: number[]): number[][] {
-  let characterTiles: number[] = [];
-  let dotTiles: number[] = [];
-  let bambooTiles: number[] = [];
+// 检查抓什么牌可以成组
+function canTing(tiles: number[]): number[] {
+  const tingTiles: number[] = [];
+  const len = tiles.length;
+  const base = 10 * Math.floor(tiles[0] / 10) + 1;
+  const min = Math.max(tiles[0] - 1, base);
+  const max = Math.min(tiles[len - 1] + 1, base + 9);
 
-  tiles.forEach(function(tile) {
-    if (tile < Card.DotOne) {
-      characterTiles.push(tile);
-    } else if (tile < Card.BambooOne) {
-      dotTiles.push(tile);
-    } else if (tile < Card.East) {
-      bambooTiles.push(tile);
+  for (let i = min; i <= max; i++) {
+    const remainTiles = checkMelds(sortTiles(tiles.concat([i])));
+
+    if (!remainTiles.length) {
+      tingTiles.push(i);
     }
-  });
-
-  let orderGroups: number[][] = [];
-
-  if (characterTiles.length) {
-    orderGroups = orderGroups.concat(groupByOrder(_.uniq(characterTiles), 2));
   }
 
-  if (dotTiles.length) {
-    orderGroups = orderGroups.concat(groupByOrder(_.uniq(dotTiles), 2));
-  }
+  return tingTiles;
+}
 
-  if (bambooTiles.length) {
-    orderGroups = orderGroups.concat(groupByOrder(_.uniq(bambooTiles), 2));
-  }
-
-  return orderGroups;
-};
-
-// 找到顺序分组
-function groupByOrder(tiles: number[], gap: number): number[][] {
-  let groups: number[][] = [];
+// 找到指定间距的顺序分组
+function groupByOrder(tiles: number[], gap: number = 1): number[][] {
+  const groups: number[][] = [];
   let lastTile = tiles.splice(0, 1)[0];
   let group: number[] = [lastTile];
   const len = tiles.length;
@@ -425,31 +253,123 @@ function groupByOrder(tiles: number[], gap: number): number[][] {
   return groups;
 };
 
-// 反序列化得到实际的牌
-function concatOrder(groups: _.Dictionary<number[]>, group: number[]): number[] {
-  let tiles: number[] = [];
+// 看牌是不是能成组，条件是3 * n + 2?
+function remain02(num: number): boolean {
+  const remainder = num % 3;
 
-  group.forEach(function(tile) {
-    let groupTiles = groups[tile];
-    tiles = tiles.concat(groupTiles);
-  });
-
-  return tiles;
+  return remainder === 0 || remainder === 2;
 }
 
-// 找出对子或者单牌
-// function getNotSomeTile(groups: _.Dictionary<number[]>, soleTiles: number[], pairTiles: number[][]): void {
-//   for (let i in groups) {
-//     const group = groups[i];
-//     const len = group.length;
+// 将牌按[万、筒、条、大字]分组
+function groupByType(tiles: number[]): _.Dictionary<number[]> {
+  const characterTiles: number[] = [];
+  const dotTiles: number[] = [];
+  const bambooTiles: number[] = [];
+  const wordTiles: number[] = [];
+  const typeGroups: _.Dictionary<number[]> = {};
 
-//     if (len === 1) {
-//       soleTiles.push(group[0]);
-//     } else if (len === 2) {
-//       pairTiles.push(group);
-//     }
-//   }
-// }
+  tiles.forEach(function(tile) {
+    const i = Math.floor(tile / 10);
+
+    switch(i) {
+      case 0:
+        characterTiles.push(tile);
+        break;
+      case 1:
+        dotTiles.push(tile);
+        break;
+      case 2:
+        bambooTiles.push(tile);
+        break;
+      default:
+        wordTiles.push(tile);
+        break;
+    }
+  });
+
+  if (characterTiles.length) {
+    typeGroups.character = characterTiles;
+  }
+
+  if (dotTiles.length) {
+    typeGroups.dot = dotTiles;
+  }
+
+  if (bambooTiles.length) {
+    typeGroups.bamboo = bambooTiles;
+  }
+
+  if (wordTiles.length) {
+    typeGroups.word = wordTiles;
+  }
+
+  return typeGroups;
+};
+
+// 获取将牌
+// tiles: 成组的牌, 12223; size: 每张牌的个数模型 131
+// 尝试把大于2个数的牌取走，看剩下的牌能不能成组，能则说明这个就是将
+function getEye(tiles: number[], size: number): number[] {
+  let tilesLen = tiles.length;
+
+  if (tilesLen === 2) {
+    return tiles;
+  }
+
+  let eye: number[] = [];
+  const sizes = size.toString().split('');
+  const uniqTiles = _.uniq(tiles);
+
+  for (let i = 0, len = sizes.length; i < len; i++) {
+    const item = parseInt(sizes[i]);
+
+    if (item >= 2) {
+      let flag = true;
+      let newSizes = sizes.slice();
+      newSizes[i] = (item - 2).toString();
+      newSizes = newSizes.join('').split('0');
+
+      newSizes.forEach(function(item) {
+        if (!item) {
+          return;
+        }
+
+        const i = parseInt(item);
+        const s = getSizeLength(i);
+
+        if (s % 3 !== 0 || _.indexOf(assembly[s], i) === -1) {
+          flag = false;
+        }
+      });
+
+      if (flag) {
+        eye = _.fill(Array(2), uniqTiles[i]);
+        break;
+      }
+    }
+  }
+
+  return eye;
+}
+
+// 获取长度: 根据每张牌的个数模型; 
+function getSizeLength(size: number): number {
+  return size.toString().split('').reduce(function(sum, val): number {
+    return sum + parseInt(val);
+  }, 0);
+}
+
+// 获取每张牌个数模型
+function groupSize(tiles: number[]): number {
+  const groups = groupBy(tiles);
+  const sides: number[] = [];
+
+  _.values(groups).forEach(function(group) {
+    sides.push(group.length);
+  });
+
+  return parseInt(sides.join(''));
+}
 
 // 分组
 function groupBy(tiles: number[]): _.Dictionary<number[]> {
@@ -470,6 +390,7 @@ export function canClaim(tiles: number[], tile: number): Meld[] {
   return melds;
 };
 
+// 碰
 export function canPong(tiles: number[], tile: number): Meld[] {
   let melds: Meld[] = [];
   let someTiles: number[] = getSomeTile(tiles, tile);
@@ -487,6 +408,7 @@ export function canPong(tiles: number[], tile: number): Meld[] {
   return melds;
 };
 
+// 杠
 export function canKong(tiles: number[], tile: number): Meld[] {
   let melds: Meld[] = [];
 
@@ -532,15 +454,12 @@ function getSomeTile(tiles: number[], tile: number): number[] {
 // 获取指定范围的牌
 function getRangeTile(tiles: number[], tile: number): number[] {
   let result: number[] = []
-  const remainder = tile % 9;
-  let left = remainder - 2;
-  left = left >= 2 ?
-    tile - 2 :
-    tile - remainder;
-  let right = 8 - (remainder + 2);
-  right = right >= 0 ?
-    tile + 2 :
-    tile + 8 - remainder;
+  const min = Math.floor(tile / 10) * 10 + 1;
+  const max = min + 8;
+  let left = tile - 2;
+  left = Math.max(left, min);
+  let right = tile + 2;
+  right = Math.min(right, max);
 
   tiles.forEach(function(i) {
     if (i >= left && i <= right) {

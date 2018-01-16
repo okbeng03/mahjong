@@ -4,22 +4,40 @@ import { getTiles, shuffleTiles, getTileSuit, getTileId, sortTiles, batchTilesSu
 function concatTiles(begin: number, end: number): number[] {
   let tiles = [];
 
-  for (let i = begin; i < end; i++) {
+  for (let i = begin; i <= end; i++) {
     tiles = tiles.concat([i, i, i, i]);
   }
 
   return tiles;
 }
 
-function getFlowerTiles(tiles: number[]): void {
-  const len = tiles.length / 4;
+function getWordTiles(): number[] {
+  let tiles = [];
 
-  for (let i = len; i < len + 8; i++) {
-    tiles.push(i);
+  for (let i = 31; i <= 37; i = i + 2) {
+    tiles = tiles.concat([i, i, i, i]);
   }
+
+  for (let i = 41; i <= 45; i = i + 2) {
+    tiles = tiles.concat([i, i, i, i]);
+  }
+
+  return tiles;
 }
 
-const numberCards = concatTiles(0, 27);
+function getFlowerTiles(): number[] {
+  let tiles = [];
+
+  for (let i = 51; i <= 58; i++) {
+    tiles.push(i);
+  }
+
+  return tiles;
+}
+
+let numberCards = concatTiles(1, 9);
+numberCards = numberCards.concat(concatTiles(11, 19));
+numberCards = numberCards.concat(concatTiles(21, 29));
 
 describe('tiles', function() {
   let tiles = [];
@@ -31,8 +49,8 @@ describe('tiles', function() {
   describe('get default tiles', function() {
     it('default tiles has all tiles', function() {
       const result = getTiles();
-      tiles = tiles.concat(concatTiles(27, 34));
-      getFlowerTiles(tiles);
+      tiles = tiles.concat(getWordTiles());
+      tiles = tiles.concat(getFlowerTiles());
 
       expect(result).to.eql(tiles);
     });
@@ -63,15 +81,15 @@ describe('tiles shuffle', function() {
 describe('get tile suit & id', function() {
   describe('get tile suit by id', function() {
     it('get tile real name', function() {
-      expect(getTileSuit(8)).to.equal('九万');
-      expect(getTileSuit(29)).to.equal('西风');
+      expect(getTileSuit(8)).to.equal('八万');
+      expect(getTileSuit(33)).to.equal('南风');
     });
   });
 
   describe('get tile id by suit', function() {
     it('get tile id', function() {
-      expect(getTileId('六筒')).to.equal(14);
-      expect(getTileId('菊')).to.equal(41);
+      expect(getTileId('六筒')).to.equal(16);
+      expect(getTileId('菊')).to.equal(58);
     });
   });
 });
@@ -88,10 +106,10 @@ describe('sort tiles', function() {
 describe('batch get tiles suit & id', function() {
   describe('batch get tiles suit by ids', function() {
     it('batch get tiles suit', function() {
-      const tiles = [0, 20, 2, 15, 40, 11, 2, 1, 2, 14, 16, 32, 8, 12];
+      const tiles = [1, 23, 2, 15, 51, 11, 2, 1, 2, 14, 16, 33, 8, 12];
       const result = batchTilesSuit(sortTiles(tiles));
   
-      expect(result).to.equal('一万,二万,三万,三万,三万,九万,三筒,四筒,六筒,七筒,八筒,三条,红中,竹');
+      expect(result).to.equal('一万,一万,二万,二万,二万,八万,一筒,二筒,四筒,五筒,六筒,三条,南风,春');
     });
   });
   
@@ -100,7 +118,7 @@ describe('batch get tiles suit & id', function() {
       const suit = '三万,三万,四万,五万,五万,六万,一筒,八筒,三条,五条,东风,发财,春,夏';
       const result = batchTilesId(suit);
 
-      expect(result).to.eql([2, 2, 3, 4, 4, 5, 9, 16, 20, 22, 27, 31, 34, 35]);
+      expect(result).to.eql([3, 3, 4, 5, 5, 6, 11, 18, 23, 25, 31, 41, 51, 52]);
     });
   });
 });

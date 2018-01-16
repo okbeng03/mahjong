@@ -2,7 +2,7 @@ import * as _ from 'lodash';
 
 export enum Card {
   // 万
-  CharacterOne,
+  CharacterOne = 1,
   CharacterTwo,
   CharacterThree,
   CharacterFour,
@@ -12,7 +12,7 @@ export enum Card {
   CharacterEight,
   CharacterNight,
   // 筒
-  DotOne,
+  DotOne = 11,
   DotTwo,
   DotThree,
   DotFour,
@@ -22,7 +22,7 @@ export enum Card {
   DotEight,
   DotNight,
   // 条
-  BambooOne,
+  BambooOne = 21,
   BambooTwo,
   BambooThree,
   BambooFour,
@@ -32,16 +32,16 @@ export enum Card {
   BambooEight,
   BambooNight,
   // 风牌
-  East,
-  South,
-  West,
-  North,
+  East = 31,
+  South = 33,
+  West = 35,
+  North = 37,
   // 箭牌
-  Green, // 发财
-  Red,   // 红中
-  White, // 白板
+  Green = 41, // 发财
+  Red = 43,   // 红中
+  White = 45, // 白板
   // 花
-  Spring,
+  Spring = 51,
   Summer,
   Autumn,
   Winter,

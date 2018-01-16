@@ -17102,53 +17102,53 @@ var lodash = createCommonjsModule(function (module, exports) {
 var Card;
 (function (Card) {
     // 万
-    Card[Card["CharacterOne"] = 0] = "CharacterOne";
-    Card[Card["CharacterTwo"] = 1] = "CharacterTwo";
-    Card[Card["CharacterThree"] = 2] = "CharacterThree";
-    Card[Card["CharacterFour"] = 3] = "CharacterFour";
-    Card[Card["CharacterFive"] = 4] = "CharacterFive";
-    Card[Card["CharacterSix"] = 5] = "CharacterSix";
-    Card[Card["CharacterSeven"] = 6] = "CharacterSeven";
-    Card[Card["CharacterEight"] = 7] = "CharacterEight";
-    Card[Card["CharacterNight"] = 8] = "CharacterNight";
+    Card[Card["CharacterOne"] = 1] = "CharacterOne";
+    Card[Card["CharacterTwo"] = 2] = "CharacterTwo";
+    Card[Card["CharacterThree"] = 3] = "CharacterThree";
+    Card[Card["CharacterFour"] = 4] = "CharacterFour";
+    Card[Card["CharacterFive"] = 5] = "CharacterFive";
+    Card[Card["CharacterSix"] = 6] = "CharacterSix";
+    Card[Card["CharacterSeven"] = 7] = "CharacterSeven";
+    Card[Card["CharacterEight"] = 8] = "CharacterEight";
+    Card[Card["CharacterNight"] = 9] = "CharacterNight";
     // 筒
-    Card[Card["DotOne"] = 9] = "DotOne";
-    Card[Card["DotTwo"] = 10] = "DotTwo";
-    Card[Card["DotThree"] = 11] = "DotThree";
-    Card[Card["DotFour"] = 12] = "DotFour";
-    Card[Card["DotFive"] = 13] = "DotFive";
-    Card[Card["DotSix"] = 14] = "DotSix";
-    Card[Card["DotSeven"] = 15] = "DotSeven";
-    Card[Card["DotEight"] = 16] = "DotEight";
-    Card[Card["DotNight"] = 17] = "DotNight";
+    Card[Card["DotOne"] = 11] = "DotOne";
+    Card[Card["DotTwo"] = 12] = "DotTwo";
+    Card[Card["DotThree"] = 13] = "DotThree";
+    Card[Card["DotFour"] = 14] = "DotFour";
+    Card[Card["DotFive"] = 15] = "DotFive";
+    Card[Card["DotSix"] = 16] = "DotSix";
+    Card[Card["DotSeven"] = 17] = "DotSeven";
+    Card[Card["DotEight"] = 18] = "DotEight";
+    Card[Card["DotNight"] = 19] = "DotNight";
     // 条
-    Card[Card["BambooOne"] = 18] = "BambooOne";
-    Card[Card["BambooTwo"] = 19] = "BambooTwo";
-    Card[Card["BambooThree"] = 20] = "BambooThree";
-    Card[Card["BambooFour"] = 21] = "BambooFour";
-    Card[Card["BambooFive"] = 22] = "BambooFive";
-    Card[Card["BambooSix"] = 23] = "BambooSix";
-    Card[Card["BambooSeven"] = 24] = "BambooSeven";
-    Card[Card["BambooEight"] = 25] = "BambooEight";
-    Card[Card["BambooNight"] = 26] = "BambooNight";
+    Card[Card["BambooOne"] = 21] = "BambooOne";
+    Card[Card["BambooTwo"] = 22] = "BambooTwo";
+    Card[Card["BambooThree"] = 23] = "BambooThree";
+    Card[Card["BambooFour"] = 24] = "BambooFour";
+    Card[Card["BambooFive"] = 25] = "BambooFive";
+    Card[Card["BambooSix"] = 26] = "BambooSix";
+    Card[Card["BambooSeven"] = 27] = "BambooSeven";
+    Card[Card["BambooEight"] = 28] = "BambooEight";
+    Card[Card["BambooNight"] = 29] = "BambooNight";
     // 风牌
-    Card[Card["East"] = 27] = "East";
-    Card[Card["South"] = 28] = "South";
-    Card[Card["West"] = 29] = "West";
-    Card[Card["North"] = 30] = "North";
+    Card[Card["East"] = 31] = "East";
+    Card[Card["South"] = 33] = "South";
+    Card[Card["West"] = 35] = "West";
+    Card[Card["North"] = 37] = "North";
     // 箭牌
-    Card[Card["Green"] = 31] = "Green";
-    Card[Card["Red"] = 32] = "Red";
-    Card[Card["White"] = 33] = "White";
+    Card[Card["Green"] = 41] = "Green";
+    Card[Card["Red"] = 43] = "Red";
+    Card[Card["White"] = 45] = "White";
     // 花
-    Card[Card["Spring"] = 34] = "Spring";
-    Card[Card["Summer"] = 35] = "Summer";
-    Card[Card["Autumn"] = 36] = "Autumn";
-    Card[Card["Winter"] = 37] = "Winter";
-    Card[Card["Plum"] = 38] = "Plum";
-    Card[Card["Orchid"] = 39] = "Orchid";
-    Card[Card["Bamboo"] = 40] = "Bamboo";
-    Card[Card["Chrysanthemum"] = 41] = "Chrysanthemum";
+    Card[Card["Spring"] = 51] = "Spring";
+    Card[Card["Summer"] = 52] = "Summer";
+    Card[Card["Autumn"] = 53] = "Autumn";
+    Card[Card["Winter"] = 54] = "Winter";
+    Card[Card["Plum"] = 55] = "Plum";
+    Card[Card["Orchid"] = 56] = "Orchid";
+    Card[Card["Bamboo"] = 57] = "Bamboo";
+    Card[Card["Chrysanthemum"] = 58] = "Chrysanthemum";
 })(Card || (Card = {}));
 
 var ClaimType;
@@ -17239,6 +17239,10 @@ var PlayerDetail = /** @class */function (_super) {
     function PlayerDetail(id, name, pick, wall) {
         var _this = _super.call(this, id, name, pick) || this;
         _this.wall = wall;
+        _this.eye = [];
+        _this.remainTiles = [];
+        _this.canWin = false;
+        _this.readyHand = {};
         return _this;
     }
     // 起牌
@@ -17271,21 +17275,35 @@ var PlayerDetail = /** @class */function (_super) {
 
 //# sourceMappingURL=playerDetail.js.map
 
+//# sourceMappingURL=data.js.map
+
 // 基础规则
 
+// 检查是否可以听牌
 
+// 检查牌成组的牌
 
+// 看牌是不是能成组，条件是3 * n + 2?
 
-
+// 获取将牌
+// tiles: 成组的牌, 12223; size: 每张牌的个数模型 131
+// 尝试把大于2个数的牌取走，看剩下的牌能不能成组，能则说明这个就是将
 
 // 是否可以行动
 
 
+// 碰
 
 
+// 杠
 
 
 // 是否可以吃
+
+
+// 获取相同的牌
+
+//# sourceMappingURL=basic.js.map
 
 //# sourceMappingURL=main.js.map
 //# sourceMappingURL=mahjong.js.map
