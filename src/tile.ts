@@ -52,13 +52,22 @@ export enum Card {
 };
 
 export enum ClaimType {
-  SelfDraw, // 自摸
-  Win,  // 胡
-  Kong,
+  None,
+  Chow,           // 吃
+  Pong,           // 碰
+  Expose,         // 明杠
   ConcealedKong,  // 暗杠
-  Expose, // 明杠
-  Pong, // 碰
-  Chow  // 吃  
+  Flower,         // 花胡
+  Win,            // 胡
+  SelfDraw,       // 自摸
+  Kong            // 杠上开花
+};
+
+export enum Pick {
+  East = 1,
+  South,
+  West,
+  North
 };
 
 const NumberCard = [
@@ -214,7 +223,7 @@ export const cardSuitMaps: StringMap = (function(): StringMap {
 
 // 洗牌：随机打乱顺序
 export let shuffleTiles = function(tiles: number[]): number[] {
-  return _.shuffle(tiles);
+  return _.shuffle(_.shuffle(_.shuffle(tiles)));
 };
 
 // 通过id获取麻将名

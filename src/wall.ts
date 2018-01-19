@@ -11,13 +11,25 @@ export default class Wall {
     return this.tiles.splice(0, isBanker ? 14 : 13);
   }
 
+  isDead(): boolean {
+    return this.tiles.length < 16;
+  }
+
   // 摸牌
   deal(): number {
+    if (this.isDead()) {
+      return -1;
+    }
+
     return this.tiles.shift();
   }
 
   // 花杠
   draw(): number {
+    if (this.isDead()) {
+      return -1;
+    }
+
     return this.tiles.pop();
   }
 };

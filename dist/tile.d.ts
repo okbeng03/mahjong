@@ -43,13 +43,21 @@ export declare enum Card {
     Chrysanthemum = 58,
 }
 export declare enum ClaimType {
-    SelfDraw = 0,
-    Win = 1,
-    Kong = 2,
-    ConcealedKong = 3,
-    Expose = 4,
-    Pong = 5,
-    Chow = 6,
+    None = 0,
+    Chow = 1,
+    Pong = 2,
+    Expose = 3,
+    ConcealedKong = 4,
+    Flower = 5,
+    Win = 6,
+    SelfDraw = 7,
+    Kong = 8,
+}
+export declare enum Pick {
+    East = 1,
+    South = 2,
+    West = 3,
+    North = 4,
 }
 /**
  * 获取默认牌

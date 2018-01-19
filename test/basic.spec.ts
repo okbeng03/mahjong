@@ -79,15 +79,15 @@ describe('get sequence', () => {
       expect(result2.length).to.equal(1);
       expect(batchTilesSuit(result2[0])).to.equal('三万,四万,二万');
 
-      const result2 = getSequence(batchTilesId('二万,三万,三万,三万,四万'), 3);
-      expect(result2.length).to.equal(1);
-      expect(batchTilesSuit(result2[0])).to.equal('二万,四万,三万');
+      const result3 = getSequence(batchTilesId('二万,三万,三万,三万,四万'), 3);
+      expect(result3.length).to.equal(1);
+      expect(batchTilesSuit(result3[0])).to.equal('二万,四万,三万');
 
-      const result3 = getSequence(batchTilesId('四条,五条,七条,八条'), 26);
-      expect(result3.length).to.equal(3);
-      expect(batchTilesSuit(result3[0])).to.equal('四条,五条,六条');
-      expect(batchTilesSuit(result3[1])).to.equal('五条,七条,六条');
-      expect(batchTilesSuit(result3[2])).to.equal('七条,八条,六条');
+      const result4 = getSequence(batchTilesId('四条,五条,七条,八条'), 26);
+      expect(result4.length).to.equal(3);
+      expect(batchTilesSuit(result4[0])).to.equal('四条,五条,六条');
+      expect(batchTilesSuit(result4[1])).to.equal('五条,七条,六条');
+      expect(batchTilesSuit(result4[2])).to.equal('七条,八条,六条');
     });
   });
 
@@ -242,7 +242,7 @@ describe('can claim', () => {
     const result = canClaim(tiles, 37);
     
     expect(result.length).to.equal(2);
-    expect(result[0].type).to.equal(ClaimType.Kong);
+    expect(result[0].type).to.equal(ClaimType.Expose);
     expect(batchTilesSuit(result[0].tiles)).to.equal('北风,北风,北风,北风');
     expect(result[1].type).to.equal(ClaimType.Pong);
     expect(batchTilesSuit(result[1].tiles)).to.equal('北风,北风,北风');
@@ -270,7 +270,7 @@ describe('can claim', () => {
     const result = canClaim(tiles, 3);
     
     expect(result.length).to.equal(3);
-    expect(result[0].type).to.equal(ClaimType.Kong);
+    expect(result[0].type).to.equal(ClaimType.Expose);
     expect(batchTilesSuit(result[0].tiles)).to.equal('三万,三万,三万,三万');
     expect(result[1].type).to.equal(ClaimType.Pong);
     expect(batchTilesSuit(result[1].tiles)).to.equal('三万,三万,三万');

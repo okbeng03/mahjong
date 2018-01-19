@@ -1,6 +1,7 @@
 node_modules/
 .idea/
 .rpt2_cache/
+.nyc_output/
 *.log
 .DS_Store
 .build/

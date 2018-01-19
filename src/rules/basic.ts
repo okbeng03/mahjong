@@ -7,16 +7,16 @@ import { assembly, eyeAssembly } from '../table/data';
 
 // 检查是否胡牌
 export function canWin(player: Player): boolean {
-  const tiles = sortTiles(player.handTiles);
+  const tiles = sortTiles(player.handTiles.slice());
   const remainTiles = checkMelds(tiles, player);
-  player.canWin = !!remainTiles.length;
+  // player.canWin = !!remainTiles.length;
 
-  return player.canWin;
+  return !!remainTiles.length;
 }
 
 // 检查是否可以听牌
 export function canReadyHand(player: Player): void {
-  const tiles = sortTiles(player.handTiles);
+  const tiles = sortTiles(player.handTiles.slice());
   const remainTiles = checkMelds(tiles, player);
 
   // 找出剩余的牌
@@ -25,6 +25,25 @@ export function canReadyHand(player: Player): void {
     player.remainTiles = remainTiles;
     checkReadyHand(player);
   }
+}
+
+// 花胡
+export function canFlowerWin(tiles: number[]): number[] {
+  const len = tiles.length;
+
+  if (len >= 4) {
+    tiles = sortTiles(tiles);
+
+    if (tiles.slice(0, 4).join('') === [Card.Spring, Card.Summer, Card.Autumn, Card.Winter].join('')) {
+      return tiles.slice(0, 4);
+    }
+    
+    if (tiles.slice(len - 4).join('' ) === [Card.Plum, Card.Orchid, Card.Bamboo, Card.Chrysanthemum].join('')) {
+      return tiles.slice(len - 4);
+    }
+  }
+
+  return [];
 }
 
 // 检查牌成组的牌
@@ -228,40 +247,8 @@ function canTing(tiles: number[]): number[] {
   return tingTiles;
 }
 
-// 找到指定间距的顺序分组
-function groupByOrder(tiles: number[], gap: number = 1): number[][] {
-  const groups: number[][] = [];
-  let lastTile = tiles.splice(0, 1)[0];
-  let group: number[] = [lastTile];
-  const len = tiles.length;
-
-  for (let i = 0; i < len; i++) {
-    let tile = tiles[i];
-
-    if (tile - lastTile <= gap) {
-      group.push(tile);
-    } else {
-      groups.push(group);
-      group = [tile];
-    }
-
-    lastTile = tile;
-  }
-
-  groups.push(group);
-
-  return groups;
-};
-
-// 看牌是不是能成组，条件是3 * n + 2?
-function remain02(num: number): boolean {
-  const remainder = num % 3;
-
-  return remainder === 0 || remainder === 2;
-}
-
 // 将牌按[万、筒、条、大字]分组
-function groupByType(tiles: number[]): _.Dictionary<number[]> {
+export function groupByType(tiles: number[]): _.Dictionary<number[]> {
   const characterTiles: number[] = [];
   const dotTiles: number[] = [];
   const bambooTiles: number[] = [];
@@ -305,6 +292,38 @@ function groupByType(tiles: number[]): _.Dictionary<number[]> {
 
   return typeGroups;
 };
+
+// 找到指定间距的顺序分组
+function groupByOrder(tiles: number[], gap: number = 1): number[][] {
+  const groups: number[][] = [];
+  let lastTile = tiles.splice(0, 1)[0];
+  let group: number[] = [lastTile];
+  const len = tiles.length;
+
+  for (let i = 0; i < len; i++) {
+    let tile = tiles[i];
+
+    if (tile - lastTile <= gap) {
+      group.push(tile);
+    } else {
+      groups.push(group);
+      group = [tile];
+    }
+
+    lastTile = tile;
+  }
+
+  groups.push(group);
+
+  return groups;
+};
+
+// 看牌是不是能成组，条件是3 * n + 2?
+function remain02(num: number): boolean {
+  const remainder = num % 3;
+
+  return remainder === 0 || remainder === 2;
+}
 
 // 获取将牌
 // tiles: 成组的牌, 12223; size: 每张牌的个数模型 131
@@ -360,7 +379,7 @@ function getSizeLength(size: number): number {
 }
 
 // 获取每张牌个数模型
-function groupSize(tiles: number[]): number {
+export function groupSize(tiles: number[]): number {
   const groups = groupBy(tiles);
   const sides: number[] = [];
 
@@ -379,25 +398,41 @@ function groupBy(tiles: number[]): _.Dictionary<number[]> {
 };
 
 // 是否可以行动
-export function canClaim(tiles: number[], tile: number): Meld[] {
+export function canClaim(tiles: number[], tile: number, canChow: boolean = true): Meld[] {
   let melds: Meld[] = [];
-  melds = canPong(tiles, tile);
+  melds = checkPong(tiles, tile);
 
-  if (tile < Card.East) {
-    melds = melds.concat(canChow(tiles, tile));
+  if (canChow && tile < Card.East) {
+    melds = melds.concat(checkChow(tiles, tile));
+  }
+
+  return melds;
+};
+
+// 杠
+export function canKong(tiles: number[], tile: number): Meld[] {
+  let melds: Meld[] = [];
+  let someTiles: number[] = getSomeTile(tiles, tile);
+  let len = someTiles.length;
+
+  if (len && len >= 3) {
+    melds[melds.length] = {
+      tiles: melds.length ? someTiles : someTiles.concat(tile),
+      type: ClaimType.ConcealedKong
+    };
   }
 
   return melds;
 };
 
 // 碰
-export function canPong(tiles: number[], tile: number): Meld[] {
+function checkPong(tiles: number[], tile: number): Meld[] {
   let melds: Meld[] = [];
   let someTiles: number[] = getSomeTile(tiles, tile);
   let len = someTiles.length;
 
   if (len && len >= 2) {
-    melds = canKong(someTiles, tile);
+    melds = checkKong(someTiles, tile);
 
     melds[melds.length] = {
       tiles: melds.length ? someTiles : someTiles.concat(tile),
@@ -408,14 +443,13 @@ export function canPong(tiles: number[], tile: number): Meld[] {
   return melds;
 };
 
-// 杠
-export function canKong(tiles: number[], tile: number): Meld[] {
+function checkKong(tiles: number[], tile: number): Meld[] {
   let melds: Meld[] = [];
 
   if (tiles.length === 3) {
     melds[0] = {
       tiles: tiles.concat(tile),
-      type: ClaimType.Kong
+      type: ClaimType.Expose
     };
   }
 
@@ -423,7 +457,7 @@ export function canKong(tiles: number[], tile: number): Meld[] {
 };
 
 // 是否可以吃
-export function canChow(tiles: number[], tile: number): Meld[] {
+function checkChow(tiles: number[], tile: number): Meld[] {
   let melds: Meld[] = [];
   let rangeTiles: number[] = getRangeTile(tiles, tile);
   let sequences = getSequence(rangeTiles, tile);
