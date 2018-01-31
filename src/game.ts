@@ -15,7 +15,7 @@ export default class Game {
   constructor() {
     this.order = Pick.East;
     this.banker = 0;
-    this.bankerCount = 1;
+    this.bankerCount = 0;
     this.bonus = [];
   }
 
@@ -54,7 +54,7 @@ export default class Game {
 
       if (round.winner !== this.banker) {
         this.banker++;
-        this.bankerCount = 1;
+        this.bankerCount = 0;
 
         if (this.banker > 3) {
           this.banker = 0;
