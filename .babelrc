@@ -8,5 +8,8 @@
         "istanbul"
       ]
     }
-  }
+  },
+  "ignore": [
+    "node_modules/**"
+  ]
 }
