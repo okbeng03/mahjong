@@ -5,6 +5,7 @@ import Round from './round';
 import Wall from './wall';
 import { sortTiles, ClaimType, Card } from './tile';
 import { canWin, canReadyHand, canClaim, canKong, canFlowerWin } from './rules/basic';
+import { BonusType } from './rules/bonus';
 
 // 玩家
 export default class PlayerDetail extends Player {
@@ -23,12 +24,17 @@ export default class PlayerDetail extends Player {
   round: Round;
   wall: Wall;
 
-  win: number;  // 赢的方式
+  score: number;    // 分数
   winFrom: number;  // 从谁那胡的
-  flowerWin: number;  // 花胡次数
+  winType: number;  // 胡牌类型
+  bonus: Array<BonusType>;  // 奖励类型
+  threeMeld: number; // 三道
+  fourMeld: number;  // 四道
+  
   meld: Meld;     // 这轮行动牌组
   melds: Meld[];  // 这轮可以行动的牌组: 前台行动使用
   discardClaim: boolean;  // 出牌行动标识: 前台行动使用
+  
   isBanker: boolean;  // 是否庄家
 
   constructor(id: number, name: string, pick: number) {
@@ -38,6 +44,11 @@ export default class PlayerDetail extends Player {
     this.remainTiles = [];
     this.canWin = true;
     this.readyHand = {};
+    this.winType = 0;
+    this.score = 0;
+    this.bonus = [];
+    this.threeMeld = -1;
+    this.fourMeld = -1;
   }
 
   // 开始
@@ -129,7 +140,8 @@ export default class PlayerDetail extends Player {
       case ClaimType.Win:
       case ClaimType.SelfDraw:
       case ClaimType.Kong:
-        this.win = meld.type;
+        let type = ClaimType[meld.type] as keyof typeof BonusType;
+        this.bonus.push(BonusType[type]);
         this.winFrom = from;
         this.round.finish(this.pick);
         break;
@@ -137,13 +149,51 @@ export default class PlayerDetail extends Player {
       case ClaimType.ConcealedKong:
       case ClaimType.Expose:
         this.chowTiles.push(meld);
+        this.checkBaoPai();
         this.draw();
         break;
       // 碰、胡
       default:
         this.chowTiles.push(meld);
+        this.checkBaoPai();
         this.discardClaim = true;
         break;
+    }
+  }
+
+  // 判断是否包牌
+  private checkBaoPai(): void {
+    const chowTiles = this.chowTiles;
+    const len = chowTiles.length;
+
+    if (len >= 3) {
+      const groups = _.groupBy(chowTiles, 'from');
+      const keys = Object.keys(groups);
+      const kLen = keys.length;
+      
+      if (kLen > 2) {
+        return;
+      }
+
+      if ((len === 3 && kLen === 1)) {
+        this.threeMeld = parseInt(keys[0]);
+        return;
+      }
+
+      if (len === 4) {
+        if (kLen === 1) {
+          this.fourMeld = parseInt(keys[0]);
+          this.threeMeld = -1;
+        } else if (kLen === 2) {
+          if (groups[keys[0]].length === 3) {
+            this.threeMeld = parseInt(keys[0]);
+          } else {
+            this.threeMeld = parseInt(keys[1]);
+          }
+        }
+
+        return;
+      }
     }
   }
 
@@ -152,9 +202,10 @@ export default class PlayerDetail extends Player {
       this.flowerTiles.push(tile);
       this.flowerTiles = sortTiles(this.flowerTiles);
       this.draw();
+      const count = canFlowerWin(this.flowerTiles, tile);
 
-      if (canFlowerWin(this.flowerTiles).length) {
-        this.flowerWin++;
+      if (count) {
+        count === 1 ? this.bonus.push(BonusType.FlowerSeason) : this.bonus.push(BonusType.FlowerBotany);
       }
 
       return;
