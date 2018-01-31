@@ -2,7 +2,6 @@ import * as _ from 'lodash';
 import Game from './game';
 import Player from './playerDetail';
 import Wall from './wall';
-import Bonus from './bonus';
 import { calculate } from './rules/bonus';
 import { ClaimType } from './tile';
 
@@ -15,10 +14,8 @@ export default class Round {
   player: number;     // 当前出牌的玩家
   winner: number;     // 赢家
   wall: Wall;         // 牌
-  // order: number[];    // 位置
   claims: ClaimType[]; // 每个玩家提出的行动
   canClaims: number[]; // 每个玩家是否能行动, 0不能行动，1可以行动
-  bonus: Bonus[];
 
   constructor(game: Game) {
     this.game = game;
@@ -42,8 +39,8 @@ export default class Round {
 
   // 结束
   finish(player: number) {
-    this.bonus = calculate(this);
     this.winner = player;
+    calculate(this);
     this.game.finish();
   }
 
