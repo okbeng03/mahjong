@@ -5,6 +5,22 @@ import { Meld } from '../meld';
 import { Card, ClaimType, sortTiles } from '../tile';
 import { assembly, eyeAssembly } from '../table/data';
 
+const thirteenOrphans = [
+  Card.CharacterOne,
+  Card.CharacterNight,
+  Card.DotOne,
+  Card.DotNight,
+  Card.BambooOne,
+  Card.BambooNight,
+  Card.East,
+  Card.South,
+  Card.West,
+  Card.North,
+  Card.Green,
+  Card.Red,
+  Card.White
+];
+
 // 检查是否胡牌
 export function canWin(player: Player): boolean {
   const tiles = sortTiles(player.handTiles.slice());
@@ -28,22 +44,22 @@ export function canReadyHand(player: Player): void {
 }
 
 // 花胡
-export function canFlowerWin(tiles: number[]): number[] {
+export function canFlowerWin(tiles: number[], tile: number): number {
   const len = tiles.length;
 
   if (len >= 4) {
     tiles = sortTiles(tiles);
 
-    if (tiles.slice(0, 4).join('') === [Card.Spring, Card.Summer, Card.Autumn, Card.Winter].join('')) {
-      return tiles.slice(0, 4);
+    if (tile < Card.Plum && tiles.slice(0, 4).join('') === [Card.Spring, Card.Summer, Card.Autumn, Card.Winter].join('')) {
+      return 1;
     }
     
-    if (tiles.slice(len - 4).join('' ) === [Card.Plum, Card.Orchid, Card.Bamboo, Card.Chrysanthemum].join('')) {
-      return tiles.slice(len - 4);
+    if (tile > Card.Winter && tiles.slice(len - 4).join('') === [Card.Plum, Card.Orchid, Card.Bamboo, Card.Chrysanthemum].join('')) {
+      return 2;
     }
   }
 
-  return [];
+  return 0;
 }
 
 // 检查牌成组的牌
@@ -83,6 +99,24 @@ function checkReadyHand(player: Player): void {
   const len = remainTiles.length;
   const eyeLen = eye.length;
 
+  if (player.handTiles.length === 14) {
+    // 七小对，十三幺
+    const readyTiles = checkPair(player.handTiles);
+
+    if (readyTiles.length) {
+      player.readyHand[readyTiles[0]] = [readyTiles[1]];
+      player.readyHand[readyTiles[1]] = [readyTiles[0]];
+      return;
+    }
+
+    const readyTile = checkUniq(player.handTiles);
+
+    if (readyTile) {
+      player.readyHand[readyTile] = thirteenOrphans;
+      return;
+    }
+  }
+
   if (len === 1) {
     if (eyeLen === 2) {
       // 对碰
@@ -98,7 +132,7 @@ function checkReadyHand(player: Player): void {
   }
 
   if (len === 2) {
-    if (!eyeLen) {
+    if (eyeLen === 1) {
       // 单吊
       player.readyHand[remainTiles[0]] = [remainTiles[1]];
       player.readyHand[remainTiles[1]] = [remainTiles[0]];
@@ -150,6 +184,51 @@ function checkReadyHand(player: Player): void {
   }
 
   player.readyHand = checkTing(partTiles);
+}
+
+// 七小对
+function checkPair(tiles: number[]): number[] {
+  const groups = groupBy(tiles);
+  const keys = Object.keys(groups);
+  const len = keys.length;
+  const readyTiles = [];
+  let count = 0;
+
+  if (len >= 7) {
+    for (let i = 0; i < len; i++) {
+      switch(groups[keys[i]].length) {
+        case 3:
+        readyTiles.push(groups[keys[i]][0]);
+        case 2:
+          count++;
+          break;
+        case 1:
+        readyTiles.push(groups[keys[i]][0]);
+          break;
+      }
+    }
+  }
+
+  if (count !== 6) {
+    readyTiles.length = 0;
+  }
+
+  return readyTiles;
+}
+
+// 十三幺
+function checkUniq(tiles: number[]): number {
+  const uniqTiles = _.uniq(sortTiles(tiles.slice()));
+
+  if (uniqTiles.length === 14) {
+    const remainTiles = _.pull(uniqTiles, ...thirteenOrphans);
+
+    if (remainTiles.length === 1) {
+      return remainTiles[0];
+    }
+  }
+
+  return 0;
 }
 
 // 检查出一张牌，抓什么牌可以成组
@@ -211,8 +290,8 @@ function checkTing(tileGroup: number[][]): _.Dictionary<number[]> {
         if (tile[0] === last) {
           continue;
         }
-
-        const remainTiles = checkMelds(newTiles);
+        
+        const remainTiles = newTiles.length ? checkMelds(newTiles) : [];
 
         if (!remainTiles.length) {
           const tingTiles = canTing(group[1]);
@@ -234,7 +313,7 @@ function canTing(tiles: number[]): number[] {
   const len = tiles.length;
   const base = 10 * Math.floor(tiles[0] / 10) + 1;
   const min = Math.max(tiles[0] - 1, base);
-  const max = Math.min(tiles[len - 1] + 1, base + 9);
+  const max = Math.min(tiles[len - 1] + 1, base + 8);
 
   for (let i = min; i <= max; i++) {
     const remainTiles = checkMelds(sortTiles(tiles.concat([i])));
