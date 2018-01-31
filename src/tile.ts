@@ -60,7 +60,9 @@ export enum ClaimType {
   Flower,         // 花胡
   Win,            // 胡
   SelfDraw,       // 自摸
-  Kong            // 杠上开花
+  Kong,           // 杠上开花
+  FirstFollow,    // 首张被跟
+  BaoPai          // 包牌
 };
 
 export enum Pick {
@@ -158,10 +160,7 @@ export let getTiles = function(hasWind = true, hasDragon = true, hasFlower = tru
   return tiles;
 }
 
-export interface StringMap {
-  [key: string]: string
-};
-export const cardMaps: StringMap = {
+export const cardMaps: _.Dictionary<string> = {
   // 万
   CharacterOne: '一万',
   CharacterTwo: '二万',
@@ -211,8 +210,9 @@ export const cardMaps: StringMap = {
   Chrysanthemum: '菊',
   Bamboo: '竹'
 };
-export const cardSuitMaps: StringMap = (function(): StringMap {
-  const maps: StringMap = {};
+
+export const cardSuitMaps: _.Dictionary<string> = (function(): _.Dictionary<string> {
+  const maps: _.Dictionary<string> = {};
 
   for (var i in cardMaps) {
     maps[cardMaps[i]] = i;
