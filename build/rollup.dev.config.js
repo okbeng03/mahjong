@@ -15,9 +15,6 @@ export default {
     commonjs(),
     typescript({
       tsconfig: 'build/tsconfig.json'
-    }),
-    babel({
-      exclude: 'node_modules/**'
     })
   ]
 };
