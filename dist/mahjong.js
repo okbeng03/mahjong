@@ -1,7 +1,5 @@
 'use strict';
 
-//# sourceMappingURL=manager.js.map
-
 var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
 
@@ -17099,6 +17097,13 @@ var lodash = createCommonjsModule(function (module, exports) {
 }.call(commonjsGlobal));
 });
 
+
+
+var _ = Object.freeze({
+	default: lodash,
+	__moduleExports: lodash
+});
+
 var Card;
 (function (Card) {
     // 万
@@ -17161,7 +17166,9 @@ var ClaimType;
     ClaimType[ClaimType["Flower"] = 5] = "Flower";
     ClaimType[ClaimType["Win"] = 6] = "Win";
     ClaimType[ClaimType["SelfDraw"] = 7] = "SelfDraw";
-    ClaimType[ClaimType["Kong"] = 8] = "Kong"; // 杠上开花
+    ClaimType[ClaimType["Kong"] = 8] = "Kong";
+    ClaimType[ClaimType["FirstFollow"] = 9] = "FirstFollow";
+    ClaimType[ClaimType["BaoPai"] = 10] = "BaoPai"; // 包牌
 })(ClaimType || (ClaimType = {}));
 
 var Pick;
@@ -17172,12 +17179,57 @@ var Pick;
     Pick[Pick["North"] = 4] = "North";
 })(Pick || (Pick = {}));
 
-var NumberCard = [Card.CharacterOne, Card.CharacterTwo, Card.CharacterThree, Card.CharacterFour, Card.CharacterFive, Card.CharacterSix, Card.CharacterSeven, Card.CharacterEight, Card.CharacterNight, Card.DotOne, Card.DotTwo, Card.DotThree, Card.DotFour, Card.DotFive, Card.DotSix, Card.DotSeven, Card.DotEight, Card.DotNight, Card.BambooOne, Card.BambooTwo, Card.BambooThree, Card.BambooFour, Card.BambooFive, Card.BambooSix, Card.BambooSeven, Card.BambooEight, Card.BambooNight];
-var WindCard = [Card.East, Card.South, Card.West, Card.North];
-var DragonCard = [Card.Green, Card.Red, Card.White];
-var FlowerCard = [Card.Spring, Card.Summer, Card.Autumn, Card.Winter, Card.Plum, Card.Orchid, Card.Bamboo, Card.Chrysanthemum];
+var NumberCard = [
+    Card.CharacterOne,
+    Card.CharacterTwo,
+    Card.CharacterThree,
+    Card.CharacterFour,
+    Card.CharacterFive,
+    Card.CharacterSix,
+    Card.CharacterSeven,
+    Card.CharacterEight,
+    Card.CharacterNight,
+    Card.DotOne,
+    Card.DotTwo,
+    Card.DotThree,
+    Card.DotFour,
+    Card.DotFive,
+    Card.DotSix,
+    Card.DotSeven,
+    Card.DotEight,
+    Card.DotNight,
+    Card.BambooOne,
+    Card.BambooTwo,
+    Card.BambooThree,
+    Card.BambooFour,
+    Card.BambooFive,
+    Card.BambooSix,
+    Card.BambooSeven,
+    Card.BambooEight,
+    Card.BambooNight
+];
+var WindCard = [
+    Card.East,
+    Card.South,
+    Card.West,
+    Card.North
+];
+var DragonCard = [
+    Card.Green,
+    Card.Red,
+    Card.White
+];
+var FlowerCard = [
+    Card.Spring,
+    Card.Summer,
+    Card.Autumn,
+    Card.Winter,
+    Card.Plum,
+    Card.Orchid,
+    Card.Bamboo,
+    Card.Chrysanthemum
+];
 // 拼接
-
 
 
 
@@ -17199,7 +17251,7 @@ var sortTiles = function (tiles) {
 
 //# sourceMappingURL=tile.js.map
 
-var Player = /** @class */function () {
+var Player = /** @class */ (function () {
     function Player(id, name, pick) {
         this.id = id;
         this.name = name;
@@ -17214,7 +17266,7 @@ var Player = /** @class */function () {
         };
     }
     return Player;
-}();
+}());
 
 //# sourceMappingURL=player.js.map
 
@@ -17257,6 +17309,21 @@ var eyeAssembly = { "2": [2], "5": [311, 2111, 23, 131, 32, 113, 1112], "8": [42
 //# sourceMappingURL=data.js.map
 
 // 基础规则
+var thirteenOrphans = [
+    Card.CharacterOne,
+    Card.CharacterNight,
+    Card.DotOne,
+    Card.DotNight,
+    Card.BambooOne,
+    Card.BambooNight,
+    Card.East,
+    Card.South,
+    Card.West,
+    Card.North,
+    Card.Green,
+    Card.Red,
+    Card.White
+];
 // 检查是否胡牌
 function canWin(player) {
     var tiles = sortTiles(player.handTiles.slice());
@@ -17278,16 +17345,17 @@ function canReadyHand(player) {
 // 花胡
 function canFlowerWin(tiles) {
     var len = tiles.length;
+    var count = 0;
     if (len >= 4) {
         tiles = sortTiles(tiles);
         if (tiles.slice(0, 4).join('') === [Card.Spring, Card.Summer, Card.Autumn, Card.Winter].join('')) {
-            return tiles.slice(0, 4);
+            count++;
         }
         if (tiles.slice(len - 4).join('') === [Card.Plum, Card.Orchid, Card.Bamboo, Card.Chrysanthemum].join('')) {
-            return tiles.slice(len - 4);
+            count++;
         }
     }
-    return [];
+    return count;
 }
 // 检查牌成组的牌
 function checkMelds(tiles, player) {
@@ -17307,7 +17375,8 @@ function checkMelds(tiles, player) {
             if (remainder === 2 && player) {
                 player.eye.push(getEye(group, size));
             }
-        } else {
+        }
+        else {
             remainTiles = remainTiles.concat(group);
         }
     });
@@ -17319,6 +17388,20 @@ function checkReadyHand(player) {
     var eye = player.eye;
     var len = remainTiles.length;
     var eyeLen = eye.length;
+    if (player.handTiles.length === 14) {
+        // 七小对，十三幺
+        var readyTiles = checkPair(player.handTiles);
+        if (readyTiles.length) {
+            player.readyHand[readyTiles[0]] = [readyTiles[1]];
+            player.readyHand[readyTiles[1]] = [readyTiles[0]];
+            return;
+        }
+        var readyTile = checkUniq(player.handTiles);
+        if (readyTile) {
+            player.readyHand[readyTile] = thirteenOrphans;
+            return;
+        }
+    }
     if (len === 1) {
         if (eyeLen === 2) {
             // 对碰
@@ -17331,7 +17414,7 @@ function checkReadyHand(player) {
         return;
     }
     if (len === 2) {
-        if (!eyeLen) {
+        if (eyeLen === 1) {
             // 单吊
             player.readyHand[remainTiles[0]] = [remainTiles[1]];
             player.readyHand[remainTiles[1]] = [remainTiles[0]];
@@ -17373,6 +17456,43 @@ function checkReadyHand(player) {
     }
     player.readyHand = checkTing(partTiles);
 }
+// 七小对
+function checkPair(tiles) {
+    var groups = groupBy(tiles);
+    var keys = Object.keys(groups);
+    var len = keys.length;
+    var readyTiles = [];
+    var count = 0;
+    if (len >= 7) {
+        for (var i = 0; i < len; i++) {
+            switch (groups[keys[i]].length) {
+                case 3:
+                    readyTiles.push(groups[keys[i]][0]);
+                case 2:
+                    count++;
+                    break;
+                case 1:
+                    readyTiles.push(groups[keys[i]][0]);
+                    break;
+            }
+        }
+    }
+    if (count !== 6) {
+        readyTiles.length = 0;
+    }
+    return readyTiles;
+}
+// 十三幺
+function checkUniq(tiles) {
+    var uniqTiles = undefined(sortTiles(tiles.slice()));
+    if (uniqTiles.length === 14) {
+        var remainTiles = undefined(_, [uniqTiles].concat(thirteenOrphans));
+        if (remainTiles.length === 1) {
+            return remainTiles[0];
+        }
+    }
+    return 0;
+}
 // 检查出一张牌，抓什么牌可以成组
 function checkTing(tileGroup) {
     var readyHand = {};
@@ -17403,7 +17523,8 @@ function checkTing(tileGroup) {
         if (group1[0] >= Card.East) {
             // 如果有大字，肯定打大字才能听牌
             groups.push(tileGroup);
-        } else {
+        }
+        else {
             if (remain02(group1Len - 1) && remain02(group2Len + 1)) {
                 groups.push([group1, group2]);
             }
@@ -17421,7 +17542,7 @@ function checkTing(tileGroup) {
                 if (tile[0] === last) {
                     continue;
                 }
-                var remainTiles = checkMelds(newTiles);
+                var remainTiles = newTiles.length ? checkMelds(newTiles) : [];
                 if (!remainTiles.length) {
                     var tingTiles = canTing(group[1]);
                     if (tingTiles) {
@@ -17439,7 +17560,7 @@ function canTing(tiles) {
     var len = tiles.length;
     var base = 10 * Math.floor(tiles[0] / 10) + 1;
     var min = Math.max(tiles[0] - 1, base);
-    var max = Math.min(tiles[len - 1] + 1, base + 9);
+    var max = Math.min(tiles[len - 1] + 1, base + 8);
     for (var i = min; i <= max; i++) {
         var remainTiles = checkMelds(sortTiles(tiles.concat([i])));
         if (!remainTiles.length) {
@@ -17489,9 +17610,7 @@ function groupByType(tiles) {
 
 // 找到指定间距的顺序分组
 function groupByOrder(tiles, gap) {
-    if (gap === void 0) {
-        gap = 1;
-    }
+    if (gap === void 0) { gap = 1; }
     var groups = [];
     var lastTile = tiles.splice(0, 1)[0];
     var group = [lastTile];
@@ -17500,7 +17619,8 @@ function groupByOrder(tiles, gap) {
         var tile = tiles[i];
         if (tile - lastTile <= gap) {
             group.push(tile);
-        } else {
+        }
+        else {
             groups.push(group);
             group = [tile];
         }
@@ -17551,7 +17671,8 @@ function getEye(tiles, size) {
     };
     for (var i = 0, len = sizes.length; i < len; i++) {
         var state_1 = _loop_1(i, len);
-        if (state_1 === "break") break;
+        if (state_1 === "break")
+            break;
     }
     return eye;
 }
@@ -17579,9 +17700,7 @@ function groupBy(tiles) {
 
 // 是否可以行动
 function canClaim(tiles, tile, canChow) {
-    if (canChow === void 0) {
-        canChow = true;
-    }
+    if (canChow === void 0) { canChow = true; }
     var melds = [];
     melds = checkPong(tiles, tile);
     if (canChow && tile < Card.East) {
@@ -17689,8 +17808,10 @@ function getSequence(tiles, tile) {
     }
     return melds;
 }
+//# sourceMappingURL=basic.js.map
 
-var PlayerDetail = /** @class */function (_super) {
+// 玩家
+var PlayerDetail = /** @class */ (function (_super) {
     __extends(PlayerDetail, _super);
     function PlayerDetail(id, name, pick) {
         var _this = _super.call(this, id, name, pick) || this;
@@ -17759,14 +17880,15 @@ var PlayerDetail = /** @class */function (_super) {
         this.meld = this.melds[idx];
         if (this.pick === this.round.player) {
             this.action(-1);
-        } else {
+        }
+        else {
             this.round.claim(this.pick, this.meld.type);
         }
     };
     // 真正的行动
     PlayerDetail.prototype.action = function (from) {
         var meld = __assign({}, this.meld, { from: from // -1表示自己
-        });
+         });
         switch (meld.type) {
             // 胡牌，结束
             case ClaimType.Win:
@@ -17794,8 +17916,9 @@ var PlayerDetail = /** @class */function (_super) {
             this.flowerTiles.push(tile);
             this.flowerTiles = sortTiles(this.flowerTiles);
             this.draw();
-            if (canFlowerWin(this.flowerTiles).length) {
-                this.flowerWin++;
+            var count = canFlowerWin(this.flowerTiles);
+            if (count) {
+                this.flowerWin = count;
             }
             return;
         }
@@ -17823,9 +17946,7 @@ var PlayerDetail = /** @class */function (_super) {
         this.handTiles = sortTiles(this.handTiles);
     };
     return PlayerDetail;
-}(Player);
-
-//# sourceMappingURL=playerDetail.js.map
+}(Player));
 
 //# sourceMappingURL=main.js.map
 //# sourceMappingURL=mahjong.js.map

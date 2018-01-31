@@ -1,3 +1,5 @@
+/// <reference types="lodash" />
+import * as _ from 'lodash';
 export declare enum Card {
     CharacterOne = 1,
     CharacterTwo = 2,
@@ -52,6 +54,8 @@ export declare enum ClaimType {
     Win = 6,
     SelfDraw = 7,
     Kong = 8,
+    FirstFollow = 9,
+    BaoPai = 10,
 }
 export declare enum Pick {
     East = 1,
@@ -66,11 +70,8 @@ export declare enum Pick {
  * @param hasFlower 是否有花
  */
 export declare let getTiles: (hasWind?: boolean, hasDragon?: boolean, hasFlower?: boolean) => number[];
-export interface StringMap {
-    [key: string]: string;
-}
-export declare const cardMaps: StringMap;
-export declare const cardSuitMaps: StringMap;
+export declare const cardMaps: _.Dictionary<string>;
+export declare const cardSuitMaps: _.Dictionary<string>;
 export declare let shuffleTiles: (tiles: number[]) => number[];
 export declare let getTileSuit: (tile: number) => string;
 export declare let getTileId: (suit: string) => number;
