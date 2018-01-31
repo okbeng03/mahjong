@@ -2,7 +2,8 @@ import { expect } from 'chai';
 const rewire = require('rewire');
 import { batchTilesId, batchTilesSuit, ClaimType } from '../src/tile';
 const basicRule = rewire('../src/rules/basic');
-import { canClaim, readyHand } from '../src/rules/basic';
+import Player from '../src/playerDetail';
+import { canClaim, canKong, groupSize, groupByType, canReadyHand, canFlowerWin, canWin } from '../src/rules/basic';
 
 describe('get range tile', () => {
   const tiles = batchTilesId('二万,三万,三万,四万,五万,四条,五条,七条,八条,九条');
@@ -116,6 +117,22 @@ describe('group by', () => {
   });
 });
 
+describe('group size', () => {
+  it('group size', function() {
+    expect(groupSize(batchTilesId('一万,四万,五万,七万,九万'))).to.eql(11111);
+    expect(groupSize(batchTilesId('一万,一万,五万,五万,五万'))).to.eql(23);
+  });
+});
+
+describe('group size length', () => {
+  const getSizeLength = basicRule.__get__('getSizeLength');
+
+  it('group size length', function() {
+    expect(getSizeLength(131)).to.equal(5);
+    expect(getSizeLength(31112213)).to.equal(14);
+  });
+});
+
 describe('group by order', () => {
   const groupByOrder = basicRule.__get__('groupByOrder');
 
@@ -133,6 +150,23 @@ describe('group by order', () => {
     expect(groupByOrder(batchTilesId('一万')), 2).to.eql([
       [1]
     ]);
+  });
+});
+
+describe('group by type', () => {
+  it('group by type', function() {
+    expect(groupByType(batchTilesId('一万,三万,八万,八万,二筒,三筒,四筒,九条,九条,东风,红中'))).to.eql({
+      character: [1, 3, 8, 8],
+      dot: [12, 13, 14],
+      bamboo: [29, 29],
+      word: [31, 43]
+    });
+
+    expect(groupByType(batchTilesId('一万,三万,八万,八万,二筒,三筒,四筒,东风,红中'))).to.eql({
+      character: [1, 3, 8, 8],
+      dot: [12, 13, 14],
+      word: [31, 43]
+    });
   });
 });
 
@@ -282,5 +316,218 @@ describe('can claim', () => {
     const result = canClaim(tiles, 9);
 
     expect(result.length).to.equal(0);
+  });
+});
+
+describe('can kong', () => {
+  const tiles = batchTilesId('二万,三万,三万,三万,四万,九筒,九筒,四条,五条,七条,北风,北风,北风');
+
+  describe('can kong ', () => {
+    it('can kong', function() {
+      const result = canKong(tiles, 37);
+      
+      expect(result.length).to.equal(1);
+      expect(result[0].type).to.equal(ClaimType.ConcealedKong);
+      expect(batchTilesSuit(result[0].tiles)).to.equal('北风,北风,北风,北风');
+    });
+  });
+
+  describe('can not kong', () => {
+    it('can not kont', function() {
+      const result = canKong(tiles, 19);
+      
+      expect(result.length).to.equal(0);
+    });
+  });
+});
+
+describe('can ready hand', () => {
+  describe('check ready hand when has one remain', () => {
+    it('check ready hand when has one remain', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('一万,二万,三万,五万,九万,九万,东风,东风');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({
+        5: [9, 31]
+      });
+    });
+
+    it('check ready hand when has one remain', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('一万,三万,四万,五万,九万,九万,东风,东风');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({
+        1: [9, 31]
+      });
+    });
+  });
+
+  describe('check ready hand when has two remain', () => {
+    it('check ready hand when has two remain', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('一万,三万,四万,五万,九万,九万,东风');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({
+        1: [31],
+        31: [1]
+      });
+    });
+  });
+
+  describe('check ready hand when has more remain', () => {
+    it('check ready hand when has three remain', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('二万,三万,三万,九万,九万');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({
+        2: [3, 9],
+        3: [1, 4]
+      });
+    });
+
+    it('check ready hand when has three remain', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('二万,三万,九万,九万,八条');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({
+        28: [1, 4]
+      });
+    });
+
+    it('check ready hand when has five remain', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('二万,三万,四万,五万,三筒,三筒,三筒,八条');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({
+        2: [28],
+        5: [28],
+        28: [2, 5]
+      });
+    });
+
+    it('check ready hand when has five remain', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('二万,三万,三万,三筒,三筒,三筒,八条,九条');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({
+        2: [27]
+      });
+    });
+  });
+
+  describe('check ready hand when seven pair', () => {
+    it('check ready hand when seven pair', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('二万,二万,三万,三万,四万,四万,九万,三筒,三筒,九条,九条,东风,东风,白板');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({
+        9: [45],
+        45: [9]
+      });
+    });
+  });
+
+  describe('check ready hand when luxury seven pair', () => {
+    it('check ready hand when luxury seven pair', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('二万,二万,三万,三万,四万,四万,九万,三筒,三筒,九条,九条,东风,东风,东风');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({
+        9: [31],
+        31: [9]
+      });
+    });
+  });
+
+  describe('check ready hand when thirteen orphans', () => {
+    it('check ready hand when luxury seven pair', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('一万,九万,一筒,三筒,九筒,一条,九条,东风,南风,西风,北风,发财,白板,红中');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({
+        13: [1, 9, 11, 19, 21, 29, 31, 33, 35, 37, 41, 43 ,45]
+      });
+    });
+  });
+
+  describe('check ready hand when no ready', () => {
+    it('word tile length gt 2', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('一万,二万,三万,四万,五万,五万,白板,红中');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({});
+    });
+
+    it('word tile type gt 2', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('一万,二万,三万,五万,五万,一筒,四条,白板');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({});
+    });
+
+    it('check ready hand when no ready', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('二万,三万,四万,三筒,三筒,三筒,八条,九条');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({});
+    });
+
+    it('check ready hand when no ready', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('一万,二万,四万,六万,六万,六万,八万,九万');
+      canReadyHand(player);
+
+      expect(player.readyHand).to.eql({});
+    });
+  });
+});
+
+describe('can flower win', () => {
+  it('can flower win', function() {
+    expect(canFlowerWin(batchTilesId('春,夏,秋,冬'), 54)).to.equal(1);
+    expect(canFlowerWin(batchTilesId('春,夏,秋,冬,菊'), 52)).to.equal(1);
+    expect(canFlowerWin(batchTilesId('梅,兰,竹,菊'), 57)).to.equal(2);
+    expect(canFlowerWin(batchTilesId('夏,秋,梅,兰,竹,菊'), 55)).to.equal(2);
+    expect(canFlowerWin(batchTilesId('春,夏,秋,冬,梅,兰,竹,菊'), 51)).to.equal(1);
+  });
+
+  it('not can flower win', function() {
+    expect(canFlowerWin(batchTilesId('春'), 51)).to.equal(0);
+    expect(canFlowerWin(batchTilesId('春,夏,秋'), 52)).to.equal(0);
+    expect(canFlowerWin(batchTilesId('春,秋,冬,菊'), 58)).to.equal(0);
+    expect(canFlowerWin(batchTilesId('春,秋,冬,梅,兰,竹'), 51)).to.equal(0);
+  });
+});
+
+describe('can win', () => {
+  describe('can win', () => {
+    it('can win', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('一万,二万,三万,九万,九万,九万,东风,东风');
+
+      expect(canWin(player)).to.not.be.ok;
+    });
+  });
+
+  describe('can not win', () => {
+    it('can not win', function() {
+      const player = new Player(1, 'AI', 0);
+      player.handTiles = batchTilesId('一万,二万,三万,五万,九万,九万,东风,东风');
+
+      expect(canWin(player)).to.be.ok;
+    });
   });
 });
