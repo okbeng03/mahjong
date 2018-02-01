@@ -1,6 +1,5 @@
 import Player from './player';
 import Round from './round';
-import Bonus from './bonus';
 import { Pick } from './tile';
 
 // 桌
@@ -10,7 +9,7 @@ export default class Game {
   order: number;      // 令
   banker: number;     // 庄家
   bankerCount: number;// 庄数
-  bonus: Bonus[];     // 分数
+  bonus: number[];     // 分数
 
   constructor() {
     this.order = Pick.East;
@@ -18,6 +17,7 @@ export default class Game {
     this.bankerCount = 0;
     this.bonus = [];
     this.players = [];
+    this.rounds = [];
   }
 
   // 添加玩家
@@ -74,10 +74,17 @@ export default class Game {
     }
   }
   
-  // TODO: 游戏结束，统计分数
   end() {
-    this.rounds.forEach((round) => {
+    for (let i = 0, len = this.players.length; i < len; i++) {
+      this.bonus[i] = 0;
+    }
 
+    const bonus = this.bonus;
+
+    this.rounds.forEach(round => {
+      round.players.forEach((player, i) => {
+        bonus[i] += player.score;
+      });
     });
   }
 };
