@@ -22,14 +22,26 @@ describe('open Hand', function() {
 });
 
 describe('get card', function() {
-  const wall = new Wall();
-  let tiles = wall.tiles.slice();
+  let wall: Wall;
+  let tiles: number[];
+
+  beforeEach(() => {
+    wall = new Wall();
+    tiles = wall.tiles.slice();
+  });
 
   describe('deal card', function() {
     it('deal card', function() {
       const result = wall.deal();
 
       expect(result).to.equal(tiles[0]);
+    });
+
+    it('deal card go dead', function() {
+      wall.tiles.length = 15;
+      const result = wall.deal();
+
+      expect(result).to.equal(-1);
     });
   });
 
@@ -38,6 +50,13 @@ describe('get card', function() {
       const result = wall.draw();
 
       expect(result).to.equal(tiles[tiles.length - 1]);
+    });
+
+    it('draw card go dead', function() {
+      wall.tiles.length = 15;
+      const result = wall.draw();
+
+      expect(result).to.equal(-1);
     });
   });
 });

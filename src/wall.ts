@@ -18,6 +18,7 @@ export default class Wall {
   // 摸牌
   deal(): number {
     if (this.isDead()) {
+      console.log(this.tiles.length);      
       return -1;
     }
 
