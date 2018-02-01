@@ -53,20 +53,27 @@ export function calculate(round: Round): void {
   const winner = players[round.winner];
   const banker = round.game.banker;
   const bankerCount = round.game.bankerCount + 1;
-  const cannons: number[] = _.fill(Array(players.length), 0);
+  const cannons: number[] = _.fill(Array(players.length), 0); // 放炮、接炮
 
   players.forEach(function(player) {
     checkKong(player, players, cannons);
     checkFlower(player);
   });
-  
-  const winScore = checkWin(winner, players, cannons);
+
+  const winScore = checkWin(winner);
+
+  if (winner.winFrom > -1) {
+    players[winner.winFrom].bonus.push(BonusType.Cannon);
+    cannons[winner.pick] += 1;
+    cannons[winner.winFrom] -= 1;
+  }
+
   let isBaoPai = winner.fourMeld;
 
-  if (winner.threeMeld && winner.winFrom === winner.threeMeld) {
+  if (winner.threeMeld > -1 && winner.winFrom === winner.threeMeld) {
     isBaoPai = winner.threeMeld;
   }
-  
+
   // 包牌
   if (isBaoPai > -1) {
     compute(players, banker, bankerCount);
@@ -78,17 +85,17 @@ export function calculate(round: Round): void {
       base = bankerCount;
     }
 
-    players.forEach(function(player, i) {
+    for (let i = 0, len = players.length; i < len; i++) {
       if (i === winner.pick) {
-        return;
+        continue;
       }
 
       if (i === banker) {
         base = bankerCount;
       }
 
-      score += winScore * bankerCount;
-    });
+      score += winScore * base;
+    }
 
     winner.score += score;
     players[isBaoPai].score -= score;
@@ -97,12 +104,25 @@ export function calculate(round: Round): void {
     compute(players, banker, bankerCount);
   }
 
-  subtractCannon(players, cannons);
+  addCannon(players, cannons);
+
+  // 首张被跟
+  if (_.indexOf(players[banker].bonus, BonusType.FirstFollow) > -1) {
+    players.forEach(function(player, i) {
+      if (i === banker) {
+        player.score -= 3;
+        return;
+      }
+
+      player.score += 1;
+    });
+  }
 }
 
 // 计算分数
 function compute(players: Player[], banker: number, bankerCount: number) {
   const len = players.length;
+  const bonus: number[] = _.fill(Array(len), 0); // 计算得分
 
   for (let i = 0; i < len; i++) {
     const player = players[i];
@@ -118,31 +138,37 @@ function compute(players: Player[], banker: number, bankerCount: number) {
     }
 
     for (let j = 0; j < len; j++) {
+      let b = base;
+
       if (j === i) {
         continue;
       }
 
       if (j === banker) {
-        base = bankerCount;
+        b = bankerCount;
       }
 
-      let s = player.score * base;
-      player.score += s;
-      players[j].score -= s;
+      let s = player.score * b;
+      bonus[i] += s;
+      bonus[j] -= s;
     }
+  }
+
+  for (let i = 0; i < len; i++) {
+    players[i].score = bonus[i];
   }
 }
 
-// 减去放炮
-function subtractCannon(players: Player[], cannons: number[]) {
-  cannons.forEach(function(cannon, i) {
-    players[i].score -= cannon;
+// 添加放炮、接炮得分
+function addCannon(players: Player[], cannons: number[]): void {
+  players.forEach(function(player, i) {
+    player.score += cannons[i];
   });
 }
 
 // 计算胡的牌型和分数
-function checkWin(player: Player, players: Player[], cannons: number[]): number {
-  const { bonus, winFrom, chowTiles, handTiles } = player;
+function checkWin(player: Player): number {
+  const { bonus, chowTiles, handTiles } = player;
   const winType = bonus.slice().sort(function(a: number, b: number): number {
     return a - b;
   })[0];
@@ -153,13 +179,11 @@ function checkWin(player: Player, players: Player[], cannons: number[]): number 
   chowTiles.forEach(function(meld: MeldDetail) {
     tiles = tiles.concat(meld.tiles);
   });
-
-  player.winType = WinType.CommonHand;
   
   // 清一色
   if (checkOneType(tiles)) {
     base += 1;
-    player.winType = WinType.Uniform;
+    player.winType.push(WinType.Uniform);
   }
 
   const size = groupSize(handTiles);
@@ -167,28 +191,27 @@ function checkWin(player: Player, players: Player[], cannons: number[]): number 
   // 碰碰胡
   if (checkAllPong(chowTiles, size)) {
     base += 1;
-    player.winType = WinType.Pong;
+    player.winType.push(WinType.Pong);
   }
 
   if (handTiles.length === 14) {
     if (checkPair(size)) {
       // 七小对
       base += 1;
-      player.winType = WinType.Pair;
+      player.winType.push(WinType.Pair);
     } else if (checkLuxuryPair(size)) {
       // 豪华七小对
       base += 2;
-      player.winType = WinType.LuxuryPair;
+      player.winType.push(WinType.LuxuryPair);
     } else if (checkUniq(handTiles)) {
       // 十三幺
       base += 12;
-      player.winType = WinType.Uniq;
+      player.winType.push(WinType.Uniq);
     }
   }
 
-  if (winFrom > -1) {
-    players[winFrom].bonus.push(BonusType.Cannon);
-    cannons[winFrom] -= 1;
+  if (!player.winType.length) {
+    player.winType.push(WinType.CommonHand);
   }
 
   switch(winType) {
@@ -227,7 +250,7 @@ function checkAllPong(chowTiles: MeldDetail[], size: number): boolean {
     }
   }
 
-  return !_.pull(size.toString().split(''), '3').length;
+  return _.pull(size.toString().split(''), '3').length === 1;
 }
 
 // 七小对
@@ -263,12 +286,11 @@ function checkFlower(player: Player): void {
 // 杠
 function checkKong(player: Player, players: Player[], cannons: number[]): void {
   player.chowTiles.forEach(function(meld: MeldDetail) {
-    const pick = player.pick;
-
     if (meld.type === ClaimType.Expose) {
       player.score += 1;
       player.bonus.push(BonusType.Expose);
       players[meld.from].bonus.push(BonusType.Cannon);
+      cannons[player.pick] += 1;
       cannons[meld.from] -= 1;
     }
 

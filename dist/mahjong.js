@@ -17256,14 +17256,6 @@ var Player = /** @class */ (function () {
         this.id = id;
         this.name = name;
         this.pick = pick;
-        this.bonus = {
-            score: 0,
-            selfDraw: 0,
-            win: 0,
-            expose: 0,
-            concealedKong: 0,
-            cannon: 0
-        };
     }
     return Player;
 }());
@@ -17343,19 +17335,18 @@ function canReadyHand(player) {
     }
 }
 // 花胡
-function canFlowerWin(tiles) {
+function canFlowerWin(tiles, tile) {
     var len = tiles.length;
-    var count = 0;
     if (len >= 4) {
         tiles = sortTiles(tiles);
-        if (tiles.slice(0, 4).join('') === [Card.Spring, Card.Summer, Card.Autumn, Card.Winter].join('')) {
-            count++;
+        if (tile < Card.Plum && tiles.slice(0, 4).join('') === [Card.Spring, Card.Summer, Card.Autumn, Card.Winter].join('')) {
+            return 1;
         }
-        if (tiles.slice(len - 4).join('') === [Card.Plum, Card.Orchid, Card.Bamboo, Card.Chrysanthemum].join('')) {
-            count++;
+        if (tile > Card.Winter && tiles.slice(len - 4).join('') === [Card.Plum, Card.Orchid, Card.Bamboo, Card.Chrysanthemum].join('')) {
+            return 2;
         }
     }
-    return count;
+    return 0;
 }
 // 检查牌成组的牌
 function checkMelds(tiles, player) {
@@ -17810,15 +17801,71 @@ function getSequence(tiles, tile) {
 }
 //# sourceMappingURL=basic.js.map
 
-// 玩家
+// 胡牌类型
+var WinType;
+(function (WinType) {
+    WinType[WinType["CommonHand"] = 1] = "CommonHand";
+    WinType[WinType["Uniform"] = 2] = "Uniform";
+    WinType[WinType["Pong"] = 3] = "Pong";
+    WinType[WinType["Pair"] = 4] = "Pair";
+    WinType[WinType["LuxuryPair"] = 5] = "LuxuryPair";
+    WinType[WinType["Uniq"] = 6] = "Uniq"; // 十三幺
+})(WinType || (WinType = {}));
+
+// 奖励类型
+var BonusType;
+(function (BonusType) {
+    BonusType[BonusType["Win"] = 0] = "Win";
+    BonusType[BonusType["SelfDraw"] = 1] = "SelfDraw";
+    BonusType[BonusType["Kong"] = 2] = "Kong";
+    BonusType[BonusType["Sky"] = 3] = "Sky";
+    BonusType[BonusType["Land"] = 4] = "Land";
+    BonusType[BonusType["FlowerSeason"] = 5] = "FlowerSeason";
+    BonusType[BonusType["FlowerBotany"] = 6] = "FlowerBotany";
+    BonusType[BonusType["Expose"] = 7] = "Expose";
+    BonusType[BonusType["ConcealedKong"] = 8] = "ConcealedKong";
+    BonusType[BonusType["BaoPai"] = 9] = "BaoPai";
+    BonusType[BonusType["Cannon"] = 10] = "Cannon";
+    BonusType[BonusType["FirstFollow"] = 11] = "FirstFollow"; // 首张被跟
+})(BonusType || (BonusType = {}));
+
+var thirteenOrphans$1 = [
+    Card.CharacterOne,
+    Card.CharacterNight,
+    Card.DotOne,
+    Card.DotNight,
+    Card.BambooOne,
+    Card.BambooNight,
+    Card.East,
+    Card.South,
+    Card.West,
+    Card.North,
+    Card.Green,
+    Card.Red,
+    Card.White
+];
+
 var PlayerDetail = /** @class */ (function (_super) {
     __extends(PlayerDetail, _super);
     function PlayerDetail(id, name, pick) {
         var _this = _super.call(this, id, name, pick) || this;
+        _this.handTiles = [];
+        _this.discardTiles = [];
+        _this.flowerTiles = [];
+        _this.chowTiles = [];
+        _this.hasDiscard = false;
+        _this.readyHand = {};
+        _this.readyHandTiles = [];
+        _this.canWin = true;
         _this.eye = [];
         _this.remainTiles = [];
-        _this.canWin = true;
-        _this.readyHand = {};
+        _this.score = 0;
+        _this.winFrom = -1;
+        _this.winType = [];
+        _this.bonus = [];
+        _this.threeMeld = -1;
+        _this.fourMeld = -1;
+        _this.discardClaim = false;
         return _this;
     }
     // 开始
@@ -17861,6 +17908,11 @@ var PlayerDetail = /** @class */ (function (_super) {
         this.discardTiles.push(tile);
         this.sort();
         this.round.check(tile);
+        this.hasDiscard = true;
+    };
+    // 出的牌被别人吃的，要移交给别人
+    PlayerDetail.prototype.tranfer = function () {
+        this.discardTiles.pop();
     };
     // 其他玩家出牌回合，检查自己是否需要这张牌
     PlayerDetail.prototype.checkClaim = function (tile, canChow) {
@@ -17894,31 +17946,73 @@ var PlayerDetail = /** @class */ (function (_super) {
             case ClaimType.Win:
             case ClaimType.SelfDraw:
             case ClaimType.Kong:
-                this.win = meld.type;
+                var type = ClaimType[meld.type];
                 this.winFrom = from;
+                this.win(type);
                 this.round.finish(this.pick);
                 break;
             // 杠
             case ClaimType.ConcealedKong:
             case ClaimType.Expose:
                 this.chowTiles.push(meld);
+                this.checkBaoPai();
                 this.draw();
                 break;
             // 碰、胡
             default:
                 this.chowTiles.push(meld);
+                this.checkBaoPai();
                 this.discardClaim = true;
                 break;
         }
+    };
+    // 判断是否包牌
+    PlayerDetail.prototype.checkBaoPai = function () {
+        var chowTiles = this.chowTiles;
+        var len = chowTiles.length;
+        if (len >= 3) {
+            var groups = undefined(chowTiles, 'from');
+            var keys = Object.keys(groups);
+            var kLen = keys.length;
+            if (kLen > 2) {
+                return;
+            }
+            if ((len === 3 && kLen === 1)) {
+                this.threeMeld = parseInt(keys[0]);
+                return;
+            }
+            if (len === 4) {
+                if (kLen === 1) {
+                    this.fourMeld = parseInt(keys[0]);
+                    this.threeMeld = -1;
+                }
+                else if (kLen === 2) {
+                    if (groups[keys[0]].length === 3) {
+                        this.threeMeld = parseInt(keys[0]);
+                    }
+                    else {
+                        this.threeMeld = parseInt(keys[1]);
+                    }
+                }
+                return;
+            }
+        }
+    };
+    PlayerDetail.prototype.win = function (type) {
+        if (!this.hasDiscard && !this.flowerTiles.length) {
+            // 手牌胡
+            type = this.isBanker ? 'Sky' : 'Land';
+        }
+        this.bonus.push(BonusType[type]);
     };
     PlayerDetail.prototype.check = function (tile, isDraw) {
         if (tile >= Card.Spring) {
             this.flowerTiles.push(tile);
             this.flowerTiles = sortTiles(this.flowerTiles);
             this.draw();
-            var count = canFlowerWin(this.flowerTiles);
+            var count = canFlowerWin(this.flowerTiles, tile);
             if (count) {
-                this.flowerWin = count;
+                count === 1 ? this.bonus.push(BonusType.FlowerSeason) : this.bonus.push(BonusType.FlowerBotany);
             }
             return;
         }
@@ -17947,6 +18041,8 @@ var PlayerDetail = /** @class */ (function (_super) {
     };
     return PlayerDetail;
 }(Player));
+
+//# sourceMappingURL=playerDetail.js.map
 
 //# sourceMappingURL=main.js.map
 //# sourceMappingURL=mahjong.js.map

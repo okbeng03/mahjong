@@ -1,4 +1,4 @@
-import Player from './playerDetail';
+import Player from './player';
 import Round from './round';
 import Bonus from './bonus';
 import { Pick } from './tile';
@@ -17,6 +17,7 @@ export default class Game {
     this.banker = 0;
     this.bankerCount = 0;
     this.bonus = [];
+    this.players = [];
   }
 
   // 添加玩家
@@ -28,7 +29,7 @@ export default class Game {
       return;
     }
 
-    const player = new Player(id, name, len + 1);
+    const player = new Player(id, name, len);
     this.players.push(player);
   }
 

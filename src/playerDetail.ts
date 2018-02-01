@@ -5,7 +5,7 @@ import Round from './round';
 import Wall from './wall';
 import { sortTiles, ClaimType, Card } from './tile';
 import { canWin, canReadyHand, canClaim, canKong, canFlowerWin } from './rules/basic';
-import { BonusType } from './rules/bonus';
+import { BonusType, WinType } from './rules/bonus';
 
 // 玩家
 export default class PlayerDetail extends Player {
@@ -13,6 +13,7 @@ export default class PlayerDetail extends Player {
   discardTiles: number[];   // 出的牌
   flowerTiles: number[];    // 花牌
   chowTiles: MeldDetail[];  // 吃的牌
+  hasDiscard: boolean;  // 是否出过牌，用来判断天胡、地胡
 
   readyHand: _.Dictionary<number[]>; // 出什么牌听什么牌
   readyHandTiles: number[]; // 听的牌
@@ -26,7 +27,7 @@ export default class PlayerDetail extends Player {
 
   score: number;    // 分数
   winFrom: number;  // 从谁那胡的
-  winType: number;  // 胡牌类型
+  winType: Array<WinType>;  // 胡牌类型
   bonus: Array<BonusType>;  // 奖励类型
   threeMeld: number; // 三道
   fourMeld: number;  // 四道
@@ -40,15 +41,27 @@ export default class PlayerDetail extends Player {
   constructor(id: number, name: string, pick: number) {
     super(id, name, pick);
 
+    this.handTiles = [];
+    this.discardTiles = [];
+    this.flowerTiles = [];
+    this.chowTiles = [];
+    this.hasDiscard = false;
+
+    this.readyHand = {};
+    this.readyHandTiles = [];
+
+    this.canWin = true;
     this.eye = [];
     this.remainTiles = [];
-    this.canWin = true;
-    this.readyHand = {};
-    this.winType = 0;
+    
     this.score = 0;
+    this.winFrom = -1;
+    this.winType = [];
     this.bonus = [];
     this.threeMeld = -1;
     this.fourMeld = -1;
+
+    this.discardClaim = false;
   }
 
   // 开始
@@ -99,6 +112,12 @@ export default class PlayerDetail extends Player {
     this.discardTiles.push(tile);
     this.sort();
     this.round.check(tile);
+    this.hasDiscard = true;
+  }
+
+  // 出的牌被别人吃的，要移交给别人
+  tranfer(): void {
+    this.discardTiles.pop();
   }
 
   // 其他玩家出牌回合，检查自己是否需要这张牌
@@ -141,8 +160,8 @@ export default class PlayerDetail extends Player {
       case ClaimType.SelfDraw:
       case ClaimType.Kong:
         let type = ClaimType[meld.type] as keyof typeof BonusType;
-        this.bonus.push(BonusType[type]);
         this.winFrom = from;
+        this.win(type);
         this.round.finish(this.pick);
         break;
       // 杠
@@ -195,6 +214,15 @@ export default class PlayerDetail extends Player {
         return;
       }
     }
+  }
+
+  private win(type: keyof typeof BonusType): void {
+    if (!this.hasDiscard && !this.flowerTiles.length) {
+      // 手牌胡
+      type = this.isBanker ? 'Sky' : 'Land';
+    }
+
+    this.bonus.push(BonusType[type]);
   }
 
   private check(tile: number, isDraw: boolean): void {
