@@ -76,6 +76,7 @@ export default class PlayerDetail extends Player {
   // 起牌
   openHand(): void {
     this.handTiles = this.wall.openHand(this.isBanker);
+    this.sort();
   }
 
   // 抽牌
@@ -132,7 +133,14 @@ export default class PlayerDetail extends Player {
       });
     }
 
-    this.melds = melds;
+    if (melds.length) {
+      melds.push({
+        type: ClaimType.None,
+        tiles: []
+      });
+      this.melds = melds;
+    }
+
     return !!melds.length;
   }
 
@@ -257,9 +265,13 @@ export default class PlayerDetail extends Player {
   }
 
   private checkWin(tile: number): boolean {
-    if (this.readyHandTiles.length && _.indexOf(this.readyHandTiles, tile) > -1) {
-      // 再检查下是否能胡
-      return canWin(this);
+    if (this.hasDiscard) {
+      if (this.readyHandTiles.length && _.indexOf(this.readyHandTiles, tile) > -1) {
+        // 再检查下是否能胡
+        return canWin(this);
+      }
+    } else {
+      return canWin(this, tile);
     }
 
     return false;
