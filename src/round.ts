@@ -27,6 +27,7 @@ export default class Round {
     this.claims = [-1, -1, -1, -1];
     this.canClaims = [0, 0, 0, 0];
     this.firstFlow = 4;
+    this.winner = -1;
   }
 
   addPlayer(id: number, name: string, pick: number): void {
@@ -85,14 +86,21 @@ export default class Round {
     this.claims[player] = claim;
 
     // 所有玩家都行动完，检查谁可以行动
-    if (_.pull(this.canClaims, 0).length === _.pull(this.claims, -1).length) {
-      player = _.findIndex(this.claims, _.max(this.claims));
-      this.players[this.player].tranfer();
-      this.players[player].action(this.player);
-      this.player = player;
+    if (_.pull(this.canClaims.slice(), 0).length === _.pull(this.claims.slice(), -1).length) {
+      // 如果大家都不行动
+      if (_.uniq(_.pull(this.claims.slice(), -1)).join('') === '0') {
+        this.claims = [-1, -1, -1, -1];
+        this.canClaims = [0, 0, 0, 0];
+        this.next();
+      } else {
+        player = this.claims.indexOf(_.max(this.claims));
+        this.players[this.player].tranfer();
+        this.players[player].action(this.player);
+        this.player = player;
 
-      this.claims = [-1, -1, -1, -1];
-      this.canClaims = [0, 0, 0, 0];
+        this.claims = [-1, -1, -1, -1];
+        this.canClaims = [0, 0, 0, 0];
+      }
     }
   }
 
@@ -107,9 +115,7 @@ export default class Round {
     // 第4轮检查大家手牌，看是不是首张被跟
     if (!this.firstFlow) {
       return;
-    }
-
-    if (this.firstFlow === 1) {
+    } else {
       let flag = true;
 
       for (let i = 0, len = this.players.length; i < len; i++) {
@@ -119,18 +125,22 @@ export default class Round {
 
         const player = this.players[i];
 
-        if (!player.discardTiles.length || player.discardTiles[0] !== tile) {
+        if (player.discardTiles.length && player.discardTiles[0] !== tile) {
           flag = false;
           break;
         }
       }
 
       if (flag) {
-        this.players[this.game.banker].bonus.push(BonusType.FirstFollow);
+        if (this.firstFlow === 1) {
+          this.players[this.game.banker].bonus.push(BonusType.FirstFollow);
+        }
+
+        this.firstFlow--;
+      } else {
+        this.firstFlow = 0;
       }
     }
-    
-    this.firstFlow--;
   }
 
   private getNext(): number {

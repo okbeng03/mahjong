@@ -2,7 +2,7 @@
 import * as _ from 'lodash';
 import Player from '../playerDetail';
 import { Meld } from '../meld';
-export declare function canWin(player: Player): boolean;
+export declare function canWin(player: Player, tile?: number): boolean;
 export declare function canReadyHand(player: Player): void;
 export declare function canFlowerWin(tiles: number[], tile: number): number;
 export declare function groupByType(tiles: number[]): _.Dictionary<number[]>;

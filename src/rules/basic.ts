@@ -22,12 +22,18 @@ const thirteenOrphans = [
 ];
 
 // 检查是否胡牌
-export function canWin(player: Player): boolean {
-  const tiles = sortTiles(player.handTiles.slice());
+export function canWin(player: Player, tile: number = 0): boolean {
+  let tiles
+  
+  if (tile > 0) {
+    tiles = sortTiles(player.handTiles.slice().concat([tile]));
+  } else {
+    tiles = sortTiles(player.handTiles.slice());
+  }
+  
   const remainTiles = checkMelds(tiles, player);
-  // player.canWin = !!remainTiles.length;
 
-  return !!remainTiles.length;
+  return !remainTiles.length;
 }
 
 // 检查是否可以听牌

@@ -17317,11 +17317,17 @@ var thirteenOrphans = [
     Card.White
 ];
 // 检查是否胡牌
-function canWin(player) {
-    var tiles = sortTiles(player.handTiles.slice());
+function canWin(player, tile) {
+    if (tile === void 0) { tile = 0; }
+    var tiles;
+    if (tile > 0) {
+        tiles = sortTiles(player.handTiles.slice().concat([tile]));
+    }
+    else {
+        tiles = sortTiles(player.handTiles.slice());
+    }
     var remainTiles = checkMelds(tiles, player);
-    // player.canWin = !!remainTiles.length;
-    return !!remainTiles.length;
+    return !remainTiles.length;
 }
 // 检查是否可以听牌
 function canReadyHand(player) {
@@ -17801,7 +17807,6 @@ function getSequence(tiles, tile) {
 }
 //# sourceMappingURL=basic.js.map
 
-// 胡牌类型
 var WinType;
 (function (WinType) {
     WinType[WinType["CommonHand"] = 1] = "CommonHand";
@@ -17845,6 +17850,11 @@ var thirteenOrphans$1 = [
     Card.White
 ];
 
+// 计算分数
+
+//# sourceMappingURL=bonus.js.map
+
+// 玩家
 var PlayerDetail = /** @class */ (function (_super) {
     __extends(PlayerDetail, _super);
     function PlayerDetail(id, name, pick) {
@@ -17879,6 +17889,7 @@ var PlayerDetail = /** @class */ (function (_super) {
     // 起牌
     PlayerDetail.prototype.openHand = function () {
         this.handTiles = this.wall.openHand(this.isBanker);
+        this.sort();
     };
     // 抽牌
     PlayerDetail.prototype.deal = function () {
@@ -17924,7 +17935,13 @@ var PlayerDetail = /** @class */ (function (_super) {
                 tiles: []
             });
         }
-        this.melds = melds;
+        if (melds.length) {
+            melds.push({
+                type: ClaimType.None,
+                tiles: []
+            });
+            this.melds = melds;
+        }
         return !!melds.length;
     };
     // 玩家选择行动
@@ -18030,9 +18047,14 @@ var PlayerDetail = /** @class */ (function (_super) {
         canReadyHand(this);
     };
     PlayerDetail.prototype.checkWin = function (tile) {
-        if (this.readyHandTiles.length && undefined(this.readyHandTiles, tile) > -1) {
-            // 再检查下是否能胡
-            return canWin(this);
+        if (this.hasDiscard) {
+            if (this.readyHandTiles.length && undefined(this.readyHandTiles, tile) > -1) {
+                // 再检查下是否能胡
+                return canWin(this);
+            }
+        }
+        else {
+            return canWin(this, tile);
         }
         return false;
     };
@@ -18041,8 +18063,6 @@ var PlayerDetail = /** @class */ (function (_super) {
     };
     return PlayerDetail;
 }(Player));
-
-//# sourceMappingURL=playerDetail.js.map
 
 //# sourceMappingURL=main.js.map
 //# sourceMappingURL=mahjong.js.map

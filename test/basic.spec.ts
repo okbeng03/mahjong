@@ -518,7 +518,7 @@ describe('can win', () => {
       const player = new Player(1, 'AI', 0);
       player.handTiles = batchTilesId('一万,二万,三万,九万,九万,九万,东风,东风');
 
-      expect(canWin(player)).to.not.be.ok;
+      expect(canWin(player)).to.be.ok;
     });
   });
 
@@ -527,7 +527,7 @@ describe('can win', () => {
       const player = new Player(1, 'AI', 0);
       player.handTiles = batchTilesId('一万,二万,三万,五万,九万,九万,东风,东风');
 
-      expect(canWin(player)).to.be.ok;
+      expect(canWin(player)).to.not.be.ok;
     });
   });
 });
