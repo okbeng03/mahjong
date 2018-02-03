@@ -41,6 +41,8 @@ export default class PlayerDetail extends Player {
     private checkBaoPai();
     private win(type);
     private check(tile, isDraw);
-    private checkWin(tile);
+    private checkWin(tile, bySelf?);
+    private checkFlower(tile?);
+    private openCheck();
     private sort();
 }

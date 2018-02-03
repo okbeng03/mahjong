@@ -1,13 +1,12 @@
-import Player from './playerDetail';
+import Player from './player';
 import Round from './round';
-import Bonus from './bonus';
 export default class Game {
     players: Player[];
     rounds: Round[];
     order: number;
     banker: number;
     bankerCount: number;
-    bonus: Bonus[];
+    bonus: number[];
     constructor();
     addPlayer(id: number, name: string): void;
     start(): void;

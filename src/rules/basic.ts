@@ -500,9 +500,9 @@ export function canKong(tiles: number[], tile: number): Meld[] {
   let someTiles: number[] = getSomeTile(tiles, tile);
   let len = someTiles.length;
 
-  if (len && len >= 3) {
-    melds[melds.length] = {
-      tiles: melds.length ? someTiles : someTiles.concat(tile),
+  if (len && len >= 4) {
+    melds[0] = {
+      tiles: someTiles.length === 4 ? someTiles : someTiles.concat(tile),
       type: ClaimType.ConcealedKong
     };
   }

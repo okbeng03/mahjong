@@ -17711,9 +17711,9 @@ function canKong(tiles, tile) {
     var melds = [];
     var someTiles = getSomeTile(tiles, tile);
     var len = someTiles.length;
-    if (len && len >= 3) {
-        melds[melds.length] = {
-            tiles: melds.length ? someTiles : someTiles.concat(tile),
+    if (len && len >= 4) {
+        melds[0] = {
+            tiles: someTiles.length === 4 ? someTiles : someTiles.concat(tile),
             type: ClaimType.ConcealedKong
         };
     }
@@ -17820,18 +17820,18 @@ var WinType;
 // 奖励类型
 var BonusType;
 (function (BonusType) {
-    BonusType[BonusType["Win"] = 0] = "Win";
-    BonusType[BonusType["SelfDraw"] = 1] = "SelfDraw";
-    BonusType[BonusType["Kong"] = 2] = "Kong";
-    BonusType[BonusType["Sky"] = 3] = "Sky";
-    BonusType[BonusType["Land"] = 4] = "Land";
-    BonusType[BonusType["FlowerSeason"] = 5] = "FlowerSeason";
-    BonusType[BonusType["FlowerBotany"] = 6] = "FlowerBotany";
-    BonusType[BonusType["Expose"] = 7] = "Expose";
-    BonusType[BonusType["ConcealedKong"] = 8] = "ConcealedKong";
-    BonusType[BonusType["BaoPai"] = 9] = "BaoPai";
-    BonusType[BonusType["Cannon"] = 10] = "Cannon";
-    BonusType[BonusType["FirstFollow"] = 11] = "FirstFollow"; // 首张被跟
+    BonusType[BonusType["Win"] = 1] = "Win";
+    BonusType[BonusType["SelfDraw"] = 2] = "SelfDraw";
+    BonusType[BonusType["Kong"] = 3] = "Kong";
+    BonusType[BonusType["Sky"] = 4] = "Sky";
+    BonusType[BonusType["Land"] = 5] = "Land";
+    BonusType[BonusType["FlowerSeason"] = 6] = "FlowerSeason";
+    BonusType[BonusType["FlowerBotany"] = 7] = "FlowerBotany";
+    BonusType[BonusType["Expose"] = 8] = "Expose";
+    BonusType[BonusType["ConcealedKong"] = 9] = "ConcealedKong";
+    BonusType[BonusType["BaoPai"] = 10] = "BaoPai";
+    BonusType[BonusType["Cannon"] = 11] = "Cannon";
+    BonusType[BonusType["FirstFollow"] = 12] = "FirstFollow"; // 首张被跟
 })(BonusType || (BonusType = {}));
 
 var thirteenOrphans$1 = [
@@ -17885,6 +17885,10 @@ var PlayerDetail = /** @class */ (function (_super) {
         this.isBanker = isBanker;
         this.discardClaim = isBanker;
         this.openHand();
+        // 补花
+        if (isBanker) {
+            this.openCheck();
+        }
     };
     // 起牌
     PlayerDetail.prototype.openHand = function () {
@@ -17893,6 +17897,10 @@ var PlayerDetail = /** @class */ (function (_super) {
     };
     // 抽牌
     PlayerDetail.prototype.deal = function () {
+        if (!this.hasDiscard) {
+            this.checkFlower();
+        }
+        this.discardClaim = true;
         var tile = this.wall.deal();
         if (tile === -1) {
             this.round.draw();
@@ -17903,6 +17911,7 @@ var PlayerDetail = /** @class */ (function (_super) {
     };
     // 后面抽牌
     PlayerDetail.prototype.draw = function () {
+        this.discardClaim = true;
         var tile = this.wall.draw();
         if (tile === -1) {
             this.round.draw();
@@ -17913,13 +17922,23 @@ var PlayerDetail = /** @class */ (function (_super) {
     };
     // 出牌
     PlayerDetail.prototype.discard = function (tile) {
-        var i = undefined(this.handTiles, tile);
+        var i = this.handTiles.indexOf(tile);
         this.discardClaim = false;
         this.handTiles.splice(i, 1)[0];
         this.discardTiles.push(tile);
         this.sort();
         this.round.check(tile);
         this.hasDiscard = true;
+        var keys = Object.keys(this.readyHand);
+        if (keys.length) {
+            var idx = keys.indexOf(tile.toString());
+            if (idx > -1) {
+                this.readyHandTiles = this.readyHand[tile];
+            }
+        }
+        else {
+            this.readyHandTiles = [];
+        }
     };
     // 出的牌被别人吃的，要移交给别人
     PlayerDetail.prototype.tranfer = function () {
@@ -17928,13 +17947,14 @@ var PlayerDetail = /** @class */ (function (_super) {
     // 其他玩家出牌回合，检查自己是否需要这张牌
     PlayerDetail.prototype.checkClaim = function (tile, canChow) {
         this.melds = [];
-        var melds = canClaim(this.handTiles, tile, canChow);
+        var melds = [];
         if (this.canWin && this.checkWin(tile)) {
             melds.push({
                 type: ClaimType.Win,
                 tiles: []
             });
         }
+        melds = melds.concat(canClaim(this.handTiles, tile, canChow));
         if (melds.length) {
             melds.push({
                 type: ClaimType.None,
@@ -17971,12 +17991,15 @@ var PlayerDetail = /** @class */ (function (_super) {
             // 杠
             case ClaimType.ConcealedKong:
             case ClaimType.Expose:
+                undefined(_, [this.handTiles].concat(meld.tiles.slice(0, -1)));
                 this.chowTiles.push(meld);
                 this.checkBaoPai();
                 this.draw();
                 break;
             // 碰、胡
-            default:
+            case ClaimType.Chow:
+            case ClaimType.Pong:
+                undefined(_, [this.handTiles].concat(meld.tiles.slice(0, -1)));
                 this.chowTiles.push(meld);
                 this.checkBaoPai();
                 this.discardClaim = true;
@@ -18015,6 +18038,7 @@ var PlayerDetail = /** @class */ (function (_super) {
             }
         }
     };
+    // 天胡、地胡
     PlayerDetail.prototype.win = function (type) {
         if (!this.hasDiscard && !this.flowerTiles.length) {
             // 手牌胡
@@ -18022,41 +18046,91 @@ var PlayerDetail = /** @class */ (function (_super) {
         }
         this.bonus.push(BonusType[type]);
     };
+    // 自己摸牌回合检查
     PlayerDetail.prototype.check = function (tile, isDraw) {
+        this.melds = [];
         if (tile >= Card.Spring) {
-            this.flowerTiles.push(tile);
-            this.flowerTiles = sortTiles(this.flowerTiles);
-            this.draw();
-            var count = canFlowerWin(this.flowerTiles, tile);
-            if (count) {
-                count === 1 ? this.bonus.push(BonusType.FlowerSeason) : this.bonus.push(BonusType.FlowerBotany);
-            }
+            this.checkFlower(tile);
             return;
         }
-        var melds = canKong(this.handTiles, tile);
-        if (this.checkWin(tile)) {
+        var melds = [];
+        if (this.checkWin(tile, true)) {
             melds.push({
                 type: isDraw ? ClaimType.Kong : ClaimType.SelfDraw,
                 tiles: []
             });
         }
+        melds = melds.concat(canKong(this.handTiles, tile));
         if (melds.length) {
             this.melds = melds;
             return;
         }
         canReadyHand(this);
     };
-    PlayerDetail.prototype.checkWin = function (tile) {
+    // 胡牌
+    PlayerDetail.prototype.checkWin = function (tile, bySelf) {
+        if (bySelf === void 0) { bySelf = false; }
         if (this.hasDiscard) {
-            if (this.readyHandTiles.length && undefined(this.readyHandTiles, tile) > -1) {
+            if (this.readyHandTiles.length && this.readyHandTiles.indexOf(tile) > -1) {
                 // 再检查下是否能胡
-                return canWin(this);
+                return bySelf ? canWin(this) : canWin(this, tile);
             }
         }
         else {
-            return canWin(this, tile);
+            return bySelf ? canWin(this) : canWin(this, tile);
         }
         return false;
+    };
+    // 补花
+    PlayerDetail.prototype.checkFlower = function (tile) {
+        var _this = this;
+        var tiles = [];
+        if (tile) {
+            tiles = [tile];
+            this.handTiles.splice(-1, 1);
+        }
+        else {
+            var idx = undefined(this.handTiles, function (tile) { return tile >= Card.Spring; });
+            if (idx > -1) {
+                tiles = this.handTiles.splice(idx, this.handTiles.length - idx);
+            }
+        }
+        tiles.forEach(function (tile) {
+            if (tile >= Card.Spring) {
+                _this.flowerTiles.push(tile);
+                _this.flowerTiles = sortTiles(_this.flowerTiles);
+                _this.draw();
+                var count = canFlowerWin(_this.flowerTiles, tile);
+                if (count) {
+                    count === 1 ? _this.bonus.push(BonusType.FlowerSeason) : _this.bonus.push(BonusType.FlowerBotany);
+                }
+            }
+        });
+    };
+    PlayerDetail.prototype.openCheck = function () {
+        var melds = [];
+        if (this.checkWin(0, true)) {
+            melds.push({
+                type: ClaimType.SelfDraw,
+                tiles: []
+            });
+        }
+        var groups = undefined(this.handTiles, function (tile) {
+            return tile / 1;
+        });
+        Object.keys(groups).forEach(function (key) {
+            var group = groups[key];
+            if (group.length === 4) {
+                melds.push({
+                    type: ClaimType.ConcealedKong,
+                    tiles: group
+                });
+            }
+        });
+        if (melds.length) {
+            this.melds = melds;
+        }
+        this.checkFlower();
     };
     PlayerDetail.prototype.sort = function () {
         this.handTiles = sortTiles(this.handTiles);

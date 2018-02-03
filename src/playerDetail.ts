@@ -71,6 +71,11 @@ export default class PlayerDetail extends Player {
     this.isBanker = isBanker;
     this.discardClaim = isBanker;
     this.openHand();
+
+    // 补花
+    if (isBanker) {
+      this.openCheck();
+    }
   }
 
   // 起牌
@@ -81,6 +86,11 @@ export default class PlayerDetail extends Player {
 
   // 抽牌
   deal(): void {
+    if (!this.hasDiscard) {
+      this.checkFlower();
+    }
+
+    this.discardClaim = true;
     const tile = this.wall.deal();
 
     if (tile === -1) {
@@ -94,6 +104,7 @@ export default class PlayerDetail extends Player {
 
   // 后面抽牌
   draw(): void {
+    this.discardClaim = true;
     const tile = this.wall.draw();
 
     if (tile === -1) {
@@ -107,13 +118,25 @@ export default class PlayerDetail extends Player {
 
   // 出牌
   discard(tile: number): void {
-    const i = _.findIndex(this.handTiles, tile);
+    const i = this.handTiles.indexOf(tile);
     this.discardClaim = false;
     this.handTiles.splice(i, 1)[0];
     this.discardTiles.push(tile);
     this.sort();
     this.round.check(tile);
     this.hasDiscard = true;
+
+    const keys = Object.keys(this.readyHand);
+
+    if (keys.length) {
+      const idx = keys.indexOf(tile.toString());
+
+      if (idx > -1) {
+        this.readyHandTiles = this.readyHand[tile];
+      }
+    } else {
+      this.readyHandTiles = [];
+    }
   }
 
   // 出的牌被别人吃的，要移交给别人
@@ -124,7 +147,7 @@ export default class PlayerDetail extends Player {
   // 其他玩家出牌回合，检查自己是否需要这张牌
   checkClaim(tile: number, canChow: boolean): boolean {
     this.melds = [];
-    const melds = canClaim(this.handTiles, tile, canChow);
+    let melds: Meld[] = [];
 
     if (this.canWin && this.checkWin(tile)) {
       melds.push({
@@ -132,6 +155,8 @@ export default class PlayerDetail extends Player {
         tiles: []
       });
     }
+
+    melds = melds.concat(canClaim(this.handTiles, tile, canChow));
 
     if (melds.length) {
       melds.push({
@@ -175,12 +200,15 @@ export default class PlayerDetail extends Player {
       // 杠
       case ClaimType.ConcealedKong:
       case ClaimType.Expose:
+        _.pull(this.handTiles, ...meld.tiles.slice(0, -1));
         this.chowTiles.push(meld);
         this.checkBaoPai();
         this.draw();
         break;
       // 碰、胡
-      default:
+      case ClaimType.Chow:
+      case ClaimType.Pong:
+        _.pull(this.handTiles, ...meld.tiles.slice(0, -1));
         this.chowTiles.push(meld);
         this.checkBaoPai();
         this.discardClaim = true;
@@ -224,6 +252,7 @@ export default class PlayerDetail extends Player {
     }
   }
 
+  // 天胡、地胡
   private win(type: keyof typeof BonusType): void {
     if (!this.hasDiscard && !this.flowerTiles.length) {
       // 手牌胡
@@ -233,28 +262,25 @@ export default class PlayerDetail extends Player {
     this.bonus.push(BonusType[type]);
   }
 
+  // 自己摸牌回合检查
   private check(tile: number, isDraw: boolean): void {
+    this.melds = [];
+
     if (tile >= Card.Spring) {
-      this.flowerTiles.push(tile);
-      this.flowerTiles = sortTiles(this.flowerTiles);
-      this.draw();
-      const count = canFlowerWin(this.flowerTiles, tile);
-
-      if (count) {
-        count === 1 ? this.bonus.push(BonusType.FlowerSeason) : this.bonus.push(BonusType.FlowerBotany);
-      }
-
+      this.checkFlower(tile);
       return;
     }
 
-    const melds = canKong(this.handTiles, tile);
+    let melds: Meld[] = [];
     
-    if (this.checkWin(tile)) {
+    if (this.checkWin(tile, true)) {
       melds.push({
         type: isDraw ? ClaimType.Kong : ClaimType.SelfDraw,
         tiles: []
       });
     }
+
+    melds = melds.concat(canKong(this.handTiles, tile));
 
     if (melds.length) {
       this.melds = melds;
@@ -264,17 +290,79 @@ export default class PlayerDetail extends Player {
     canReadyHand(this);
   }
 
-  private checkWin(tile: number): boolean {
+  // 胡牌
+  private checkWin(tile: number, bySelf: boolean = false): boolean {
     if (this.hasDiscard) {
-      if (this.readyHandTiles.length && _.indexOf(this.readyHandTiles, tile) > -1) {
+      if (this.readyHandTiles.length && this.readyHandTiles.indexOf(tile) > -1) {
         // 再检查下是否能胡
-        return canWin(this);
+        return bySelf ? canWin(this) : canWin(this, tile);
       }
     } else {
-      return canWin(this, tile);
+      return bySelf ? canWin(this) : canWin(this, tile);
     }
 
     return false;
+  }
+
+  // 补花
+  private checkFlower(tile?: number): void {
+    let tiles: number[] = [];
+
+    if (tile) {
+      tiles = [tile];
+      this.handTiles.splice(-1, 1);
+    } else {
+      let idx = _.findIndex(this.handTiles, tile => tile >= Card.Spring);
+      
+      if (idx > -1) {
+        tiles = this.handTiles.splice(idx, this.handTiles.length - idx);
+      }
+    }
+
+    tiles.forEach(tile => {
+      if (tile >= Card.Spring) {
+        this.flowerTiles.push(tile);
+        this.flowerTiles = sortTiles(this.flowerTiles);
+        this.draw();
+        const count = canFlowerWin(this.flowerTiles, tile);
+  
+        if (count) {
+          count === 1 ? this.bonus.push(BonusType.FlowerSeason) : this.bonus.push(BonusType.FlowerBotany);
+        }
+      }
+    });
+  }
+
+  private openCheck(): void {
+    let melds: Meld[] = [];
+
+    if (this.checkWin(0, true)) {
+      melds.push({
+        type: ClaimType.SelfDraw,
+        tiles: []
+      });
+    }
+
+    const groups = _.groupBy(this.handTiles, function(tile) {
+      return tile / 1;
+    });
+
+    Object.keys(groups).forEach(function(key) {
+      const group = groups[key];
+
+      if (group.length === 4) {
+        melds.push({
+          type: ClaimType.ConcealedKong,
+          tiles: group
+        });
+      }
+    });
+
+    if (melds.length) {
+      this.melds = melds;
+    }
+
+    this.checkFlower();
   }
 
   private sort(): void {

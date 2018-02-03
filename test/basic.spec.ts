@@ -324,6 +324,7 @@ describe('can kong', () => {
 
   describe('can kong ', () => {
     it('can kong', function() {
+      tiles.push(37);
       const result = canKong(tiles, 37);
       
       expect(result.length).to.equal(1);
@@ -334,6 +335,7 @@ describe('can kong', () => {
 
   describe('can not kong', () => {
     it('can not kont', function() {
+      tiles.push(19);
       const result = canKong(tiles, 19);
       
       expect(result.length).to.equal(0);

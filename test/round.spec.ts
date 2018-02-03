@@ -100,7 +100,8 @@ describe('check', () => {
       players[3].discard(41);
       expect(round.firstFlow).to.equal(0);
 
-      expect(players[0].bonus).to.eql([BonusType.FirstFollow]);
+      players[0].bonus.sort((a, b) => b - a);
+      expect(players[0].bonus[0]).to.eql(BonusType.FirstFollow);
       round.draw();
     });
 
@@ -120,7 +121,7 @@ describe('check', () => {
       players[0].discard(9);
       expect(round.firstFlow).to.equal(3);
       expect(round.canClaims).to.eql([0, 1, 0, 0]);
-      round.claim(1, ClaimType.Chow);
+      players[1].claim(0);
       expect(round.firstFlow).to.equal(0);
       players[1].discard(41);
       expect(round.firstFlow).to.equal(0);

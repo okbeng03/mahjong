@@ -18,7 +18,7 @@ export enum WinType {
 
 // 奖励类型
 export enum BonusType {
-  Win,            // 胡
+  Win = 1,        // 胡
   SelfDraw,       // 自摸
   Kong,           // 杠上开花
   Sky,            // 天胡
