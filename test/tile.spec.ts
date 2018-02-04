@@ -111,12 +111,26 @@ describe('batch get tiles suit & id', function() {
   
       expect(result).to.equal('一万,一万,二万,二万,二万,八万,一筒,二筒,四筒,五筒,六筒,三条,南风,春');
     });
+
+    it('batch get tiles suit', function() {
+      const tiles = [1, 23, 2, 15, 51, 11, 2, 1, 2, 14, 16, 33, 8, 12];
+      const result = batchTilesSuit(sortTiles(tiles), '.');
+  
+      expect(result).to.equal('一万.一万.二万.二万.二万.八万.一筒.二筒.四筒.五筒.六筒.三条.南风.春');
+    });
   });
   
   describe('batch get tiles ids by suit', function() {
     it('batch get tiles ids', function() {
       const suit = '三万,三万,四万,五万,五万,六万,一筒,八筒,三条,五条,东风,发财,春,夏';
       const result = batchTilesId(suit);
+
+      expect(result).to.eql([3, 3, 4, 5, 5, 6, 11, 18, 23, 25, 31, 41, 51, 52]);
+    });
+
+    it('batch get tiles ids', function() {
+      const suit = '三万.三万.四万.五万.五万.六万.一筒.八筒.三条.五条.东风.发财.春.夏';
+      const result = batchTilesId(suit, '.');
 
       expect(result).to.eql([3, 3, 4, 5, 5, 6, 11, 18, 23, 25, 31, 41, 51, 52]);
     });
