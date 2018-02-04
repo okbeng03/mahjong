@@ -3,8 +3,8 @@ import { getTiles, shuffleTiles } from './tile';
 export default class Wall {
   tiles: number[];
 
-  constructor() {
-    this.tiles = shuffleTiles(getTiles());
+  constructor(hasWind = true, hasDragon = true, hasFlower = true) {
+    this.tiles = shuffleTiles(getTiles(hasWind, hasDragon, hasFlower));
   }
 
   openHand(isBanker: boolean): number[] {

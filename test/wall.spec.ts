@@ -1,6 +1,28 @@
 import { expect } from 'chai';
 import Wall from '../src/wall';
 
+describe('constructor', () => {
+  it('all', function() {
+    const wall = new Wall();
+
+    expect(wall.tiles.length).to.equal(144);
+  });
+
+  it('has some', function() {
+    let wall = new Wall(true, false, false);
+    expect(wall.tiles.length).to.equal(124);
+
+    wall = new Wall(false, true, false);
+    expect(wall.tiles.length).to.equal(120);
+  });
+
+  it('has none', function() {
+    const wall = new Wall(false, false, false);
+
+    expect(wall.tiles.length).to.equal(108);
+  });
+});
+
 describe('open Hand', function() {
   describe('open hand by banker', function() {
     it('open hand by hourse', function() {

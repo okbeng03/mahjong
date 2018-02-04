@@ -7,6 +7,16 @@ import Round from '../src/round';
 import Player from '../src/playerDetail';
 import { canClaim, canKong, groupSize, groupByType, canReadyHand, canFlowerWin, canWin, hasPoint } from '../src/rules/basic';
 
+describe('remain02', () => {
+  const remain02 = basicRule.__get__('remain02');
+
+  it('remain02', function() {
+    expect(remain02(8)).to.be.ok;
+    expect(remain02(9)).to.be.ok;
+    expect(remain02(4)).to.not.be.ok;
+  });
+});
+
 describe('get range tile', () => {
   const tiles = batchTilesId('二万,三万,三万,四万,五万,四条,五条,七条,八条,九条');
   const getRangeTile = basicRule.__get__('getRangeTile');

@@ -6,6 +6,7 @@ import Game from '../src/game';
 import Round from '../src/round';
 import Player from '../src/playerDetail';
 import { calculate, BonusType, WinType } from '../src/rules/bonus';
+import Wall from '../src/wall';
 
 describe('check win', () => {
   const checkWin = bonusRule.__get__('checkWin');
@@ -176,6 +177,7 @@ describe('check flower', () => {
 describe('caculate', () => {
   let game: Game;
   let round: Round;
+  let wall: Wall;
 
   before(() => {
     game = new Game();

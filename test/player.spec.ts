@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import Game from '../src/game';
 import Round from '../src/round';
+import Wall from '../src/wall';
 import Player from '../src/playerDetail';
 import { ClaimType } from '../src/tile';
 import { BonusType } from '../src/rules/bonus';
@@ -173,14 +174,24 @@ describe('player props', () => {
 
   describe('action', () => {
     beforeEach(() => {
-      players[0].handTiles = [1, 2, 3, 4, 5, 12, 12, 23, 25, 29, 31, 31, 31];
-      players[1].handTiles = [1, 4, 6, 7, 8, 18, 18, 18, 24, 24, 26, 27, 35];
-      players[2].handTiles = [2, 3, 4, 6, 6, 16, 17, 22, 23, 24, 33, 33, 33];
-      players[3].handTiles = [2, 3, 4, 7, 8, 9, 19, 19, 24, 25, 26, 29, 29];
+      wall = new Wall();
+      wall.tiles.splice(0, 43, ...[
+        1, 2, 3, 4, 5, 12, 12, 23, 25, 29, 31, 31, 31, 41,
+        1, 4, 6, 7, 8, 18, 18, 18, 24, 24, 26, 27, 35,
+        2, 3, 4, 6, 6, 16, 17, 22, 23, 24, 33, 33, 33,
+        2, 3, 4, 7, 8, 9, 19, 19, 24, 25, 26, 29, 29
+      ]);
+      const defaultOrder = [0, 1, 2, 3];
+      const banker = game.banker;
+      const order = defaultOrder.slice(banker).concat(defaultOrder.slice(0, banker));
+      round.wall = wall;
+
+      order.forEach((pick, i) => {
+        players[pick].start(round, !i);
+      });
     });
 
     it('win', function() {
-      players[0].handTiles.push(41);
       wall.tiles[0] = 43;
       players[0].discard(41);
       wall.tiles[0] = 43;
@@ -199,7 +210,6 @@ describe('player props', () => {
     });
 
     it('self draw', function() {
-      players[1].handTiles.push(41);
       wall.tiles[0] = 43;
       players[1].discard(41);
       wall.tiles[0] = 43;
@@ -208,32 +218,34 @@ describe('player props', () => {
       players[3].discard(43);
       wall.tiles[0] = 45;
       players[0].discard(43);
-      wall.tiles[0] = 15;
+      wall.tiles[0] = 45;
       players[1].discard(45);
-      players[2].claim(0);
+      wall.tiles[0] = 15;
+      players[2].discard(45);
+      players[3].claim(0);
       
-      expect(players[2].winFrom).to.equal(-1);
-      expect(players[2].bonus).to.eql([BonusType.SelfDraw]);
-      expect(round.winner).to.equal(2);
+      expect(players[3].winFrom).to.equal(-1);
+      expect(players[3].bonus).to.eql([BonusType.SelfDraw]);
+      expect(round.winner).to.equal(3);
       expect(game.banker).to.equal(2);
     });
 
     it('kong', function() {
-      players[2].handTiles.push(41);
-      wall.tiles[0] = 53;
-      wall.tiles.splice(-1, 1, 19);
+      wall.tiles[0] = 43;
       players[2].discard(41);
-      players[3].claim(0);
+      wall.tiles[0] = 53;
+      wall.tiles.splice(-1, 1, 15);
+      players[3].discard(43);
+      players[0].claim(0);
       
-      expect(players[3].winFrom).to.equal(-1);
-      expect(players[3].bonus).to.eql([BonusType.Kong]);
-      expect(round.winner).to.equal(3);
+      expect(players[0].winFrom).to.equal(-1);
+      expect(players[0].bonus).to.eql([BonusType.Kong]);
+      expect(round.winner).to.equal(0);
       expect(game.banker).to.equal(3);
     });
 
     it('concealed kong', function() {
-      players[3].handTiles.push(41);
-      wall.tiles[0] = 31;
+      wall.tiles[0] = 18;
       players[3].discard(41);
       players[0].claim(0);
       round.finish(2);
@@ -243,7 +255,6 @@ describe('player props', () => {
     });
 
     it('expose', function() {
-      players[0].handTiles.push(41);
       players[3].discard(33);
       players[2].claim(0);
       round.finish(2);
@@ -253,14 +264,13 @@ describe('player props', () => {
     });
 
     it('chow', function() {
-      players[1].handTiles.push(41);
-      players[1].discard(2);
+      players[1].discard(5);
       players[2].claim(0);
 
       expect(players[2].chowTiles).to.eql([
         {
           type: ClaimType.Chow,
-          tiles: [3, 4, 2],
+          tiles: [4, 6, 5],
           from: 1
         }
       ]);
@@ -269,133 +279,219 @@ describe('player props', () => {
     });
 
     it('baopai', function() {
-      players[1].handTiles.push(41);
-      players[1].discard(4);
-      players[2].claim(0);
+      players[1].discard(41);
       players[2].discard(4);
-      players[3].claim(1);
-      players[3].discard(9);
+      players[3].claim(0);
+      players[3].discard(4);
+      players[0].claim(1);
+      players[0].discard(9);
       wall.tiles[0] = 33;
-      players[0].discard(1);
+      players[1].discard(1);
       wall.tiles.splice(-1, 1, 43);
-      players[1].discard(33);
-      players[2].claim(0);
-      players[2].discard(43);
-      players[3].discard(29);
-      players[0].discard(31);
-      players[1].discard(22);
-      players[2].claim(0);
+      players[2].discard(33);
+      players[3].claim(0);
+      players[3].discard(43);
+      players[0].discard(29);
+      players[1].discard(31);
+      players[2].discard(22);
+      players[3].claim(0);
 
-      expect(players[2].threeMeld).to.equal(1);
+      expect(players[3].threeMeld).to.equal(2);
       round.draw();
     });
 
     it('baopai three', function() {   
-      players[1].handTiles.push(41);
-      players[1].discard(4);
-      players[2].claim(0);
-      players[2].discard(4);
-      players[3].claim(1);
+      players[1].discard(41);
       wall.tiles[0] = 33;
-      players[3].discard(9);
+      players[2].discard(4);
+      players[3].claim(0);
+      players[3].discard(4);
+      players[0].claim(1);
+      players[0].discard(9);
       wall.tiles.splice(-1, 1, 43);
-      players[0].discard(33);
-      players[2].claim(0);
-      players[2].discard(43);
-      players[3].discard(29);
-      players[0].discard(31);
-      players[1].discard(22);
-      players[2].claim(0);
+      players[1].discard(33);
+      players[3].claim(0);
+      players[3].discard(43);
+      players[0].discard(8);
+      players[1].discard(31);
       players[2].discard(22);
-      players[3].discard(29);
-      players[0].discard(31);
-      players[1].discard(6);
-      players[2].claim(0);
-
-      expect(players[2].threeMeld).to.equal(1);
+      players[3].claim(0);
+      players[3].discard(22);
+      players[0].discard(19);
+      players[1].discard(31);
+      players[2].discard(6);
+      players[3].claim(0);
+      console.log(players[3].chowTiles, players.melds, round.player);
+      expect(players[3].threeMeld).to.equal(2);
       round.draw();
     });
 
     it('baopai four', function() {
-      players[1].handTiles.push(41);
-      players[1].discard(4);
-      players[2].claim(0);
+      players[1].discard(41);
       players[2].discard(4);
-      players[3].claim(1);
-      players[3].discard(9);
+      players[3].claim(0);
+      players[3].discard(4);
+      players[0].claim(1);
+      players[0].discard(9);
       wall.tiles[0] = 33;
-      players[0].discard(1);
+      players[1].discard(1);
       wall.tiles.splice(-1, 1, 43);
-      players[1].discard(33);
-      players[2].claim(0);
-      players[2].discard(43);
-      players[3].discard(9);
-      players[0].discard(31);
-      players[1].discard(22);
-      players[2].claim(0);
+      players[2].discard(33);
+      players[3].claim(0);
+      players[3].discard(43);
+      players[0].discard(29);
+      players[1].discard(31);
       players[2].discard(22);
-      players[3].discard(29);
-      players[0].discard(31);
-      players[1].discard(6);
-      players[2].claim(0);
-
-      expect(players[2].fourMeld).to.equal(1);
+      players[3].claim(0);
+      players[3].discard(22);
+      players[0].discard(19);
+      players[1].discard(31);
+      players[2].discard(6);
+      players[3].claim(0);
+      console.log(players[3].chowTiles, players.melds, round.player);
+      expect(players[3].fourMeld).to.equal(2);
       round.draw();
     });
 
     it('not baopai', function() {
-      players[1].handTiles.push(41);
-      players[1].discard(4);
-      players[2].claim(0);
-      players[2].discard(4);
-      players[3].claim(1);
+      players[1].discard(41);
       wall.tiles[0] = 33;
-      players[3].discard(9);
+      players[2].discard(4);
+      players[3].claim(0);
+      players[3].discard(4);
+      players[0].claim(1);
+      players[0].discard(9);
       wall.tiles.splice(-1, 1, 43);
-      players[0].discard(33);
-      players[2].claim(0);
-      players[2].discard(43);
-      players[3].discard(29);
-      players[0].discard(31);
-      players[1].discard(22);
-      players[2].claim(0);
+      players[1].discard(33);
+      players[3].claim(0);
+      players[3].discard(43);
+      players[0].discard(29);
+      players[1].discard(31);
+      players[2].discard(22);
+      players[3].claim(0);
 
-      expect(players[2].threeMeld).to.equal(-1);
+      expect(players[3].threeMeld).to.equal(-1);
       round.draw();
     });
 
     it('land', function() {
-      players[1].handTiles.push(41);
-      players[1].discard(18);
-      players[2].claim(0);
+      players[3].flowerTiles = [];
+      players[1].discard(41);
+      players[2].discard(18);
+      players[3].claim(0);
       
-      expect(players[2].winFrom).to.equal(1);
-      expect(players[2].bonus).to.eql([BonusType.Land]);
-      expect(round.winner).to.equal(2);
+      expect(players[3].winFrom).to.equal(2);
+      expect(players[3].bonus).to.eql([BonusType.Land]);
+      expect(round.winner).to.equal(3);
       expect(game.banker).to.equal(2);
     });
 
     it('land self draw', function() {
-      players[2].handTiles.push(41);
-      wall.tiles[0] = 19;
+      players[0].flowerTiles = [];
       players[2].discard(41);
-      players[3].claim(0);
+      wall.tiles[0] = 15;
+      players[3].discard(35);
+      players[0].claim(0);
       
-      expect(players[3].winFrom).to.equal(-1);
-      expect(players[3].bonus).to.eql([BonusType.Land]);
-      expect(round.winner).to.equal(3);
+      expect(players[0].winFrom).to.equal(-1);
+      expect(players[0].bonus).to.eql([BonusType.Land]);
+      expect(round.winner).to.equal(0);
       expect(game.banker).to.equal(3);
     });
 
     it('sky', function() {
-      // players[3].handTiles.push(19);
-      // players[3].openCheck();
-      // players[3].claim(0);
+      wall = new Wall();
+      wall.tiles.splice(0, 43, ...[
+        2, 3, 4, 6, 6, 15, 16, 17, 22, 23, 24, 33, 33, 33,
+        1, 4, 6, 7, 8, 18, 18, 18, 24, 24, 26, 27, 35,
+        1, 2, 3, 4, 5, 12, 12, 23, 25, 29, 31, 31, 31,
+        2, 3, 4, 7, 8, 9, 19, 19, 24, 25, 26, 29, 29
+      ]);
+      const defaultOrder = [0, 1, 2, 3];
+      const banker = game.banker;
+      const order = defaultOrder.slice(banker).concat(defaultOrder.slice(0, banker));
+      round.wall = wall;
+
+      order.forEach((pick, i) => {
+        players[pick].start(round, !i);
+      });
+
+      players[3].flowerTiles = [];
+      players[3].claim(0);
       
-      // expect(players[2].winFrom).to.equal(-1);
-      // expect(players[2].bonus).to.eql([BonusType.Sky]);
-      // expect(round.winner).to.equal(3);
-      // expect(game.banker).to.equal(3);
+      expect(players[3].winFrom).to.equal(-1);
+      expect(players[3].bonus).to.eql([BonusType.Sky]);
+      expect(round.winner).to.equal(3);
+      expect(game.banker).to.equal(3);
     });
+
+    it('open hand concealekong', function() {
+      wall = new Wall();
+      wall.tiles.splice(0, 43, ...[
+        2, 3, 4, 6, 6, 16, 17, 22, 23, 24, 33, 33, 33, 33,
+        1, 4, 6, 7, 8, 18, 18, 18, 24, 24, 26, 27, 35,
+        1, 2, 3, 4, 5, 12, 12, 23, 25, 29, 31, 31, 31,
+        2, 3, 4, 7, 8, 9, 19, 19, 24, 25, 26, 29, 29
+      ]);
+      const defaultOrder = [0, 1, 2, 3];
+      const banker = game.banker;
+      const order = defaultOrder.slice(banker).concat(defaultOrder.slice(0, banker));
+      round.wall = wall;
+
+      order.forEach((pick, i) => {
+        players[pick].start(round, !i);
+      });
+
+      players[3].flowerTiles = [];
+      players[3].claim(0);
+
+      expect(players[3].chowTiles).to.eql([
+        {
+          type: ClaimType.ConcealedKong,
+          tiles: [33, 33, 33, 33],
+          from: -1
+        }
+      ]);
+    });
+  });
+});
+
+describe('check flower', () => {
+  let player;
+  let wall;
+
+  beforeEach(() => {
+    wall = new Wall(true, true, false);
+    player = new Player(1, 'test1', 0);
+    player.wall = wall;
+  });
+
+  it('season', function() {
+    player.handTiles = [1, 2, 3, 51, 52, 53, 54, 55];
+    player.checkFlower();
+
+    expect(player.bonus).to.eql([BonusType.FlowerSeason]);
+  });
+
+  it('botany', function() {
+    player.handTiles = [1, 2, 3, 51, 52, 53, 54, 55, 56, 57, 58];
+    player.checkFlower();
+
+    expect(player.bonus).to.eql([BonusType.FlowerSeason, BonusType.FlowerBotany]);
+  });
+
+  it('no flower win', function() {
+    player.handTiles = [1, 2, 3, 51, 52, 54];
+    player.checkFlower();
+
+    expect(player.bonus).to.be.empty;
+  });
+
+  it('draw check', function() {
+    player.handTiles = [1, 2, 3, 53];
+    player.flowerTiles = [51, 52, 54];
+    player.checkFlower(53);
+
+    expect(player.bonus).to.eql([BonusType.FlowerSeason]);
   });
 });
