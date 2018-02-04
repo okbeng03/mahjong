@@ -2,8 +2,10 @@ import { expect } from 'chai';
 const rewire = require('rewire');
 import { batchTilesId, batchTilesSuit, ClaimType } from '../src/tile';
 const basicRule = rewire('../src/rules/basic');
+import Game from '../src/game';
+import Round from '../src/round';
 import Player from '../src/playerDetail';
-import { canClaim, canKong, groupSize, groupByType, canReadyHand, canFlowerWin, canWin } from '../src/rules/basic';
+import { canClaim, canKong, groupSize, groupByType, canReadyHand, canFlowerWin, canWin, hasPoint } from '../src/rules/basic';
 
 describe('get range tile', () => {
   const tiles = batchTilesId('二万,三万,三万,四万,五万,四条,五条,七条,八条,九条');
@@ -530,6 +532,215 @@ describe('can win', () => {
       player.handTiles = batchTilesId('一万,二万,三万,五万,九万,九万,东风,东风');
 
       expect(canWin(player)).to.not.be.ok;
+    });
+  });
+});
+
+describe('check point', () => {
+  let game;
+  let round;
+  let players;
+
+  before(() => {
+    game = new Game();
+    game.addPlayer(1, 'test1');
+    game.addPlayer(2, 'test2');
+    game.addPlayer(3, 'test3');
+    game.addPlayer(4, 'test4');
+  });
+
+  beforeEach(() => {
+    game.start();
+    round = game.rounds[game.rounds.length - 1];
+    players = round.players;
+  });
+
+  describe('has point', () => {
+    it('门前清', function() {
+      expect(hasPoint(players[0])).to.be.ok;
+      round.draw();
+    });
+
+    it('只吃不碰，对子不是翻牌', function() {
+      players[0].handTiles = [2, 3, 4, 9, 9, 14, 15, 16];
+      players[0].flowerTiles = [];
+      players[0].chowTiles = [
+        {
+          type: ClaimType.Chow,
+          tiles: [21, 22, 23],
+          from: 3
+        },
+        {
+          type: ClaimType.Chow,
+          tiles: [22, 23, 24],
+          from: 3
+        }
+      ];
+      
+      expect(canWin(players[0])).to.be.ok;
+      expect(hasPoint(players[0])).to.be.ok;
+    });
+
+    it('258', function() {
+      players[0].handTiles = [2, 3, 4, 8, 8, 14, 15, 16];
+      players[0].flowerTiles = [];
+      players[0].chowTiles = [
+        {
+          type: ClaimType.Pong,
+          tiles: [22, 22, 22],
+          from: 2
+        },
+        {
+          type: ClaimType.Chow,
+          tiles: [22, 23, 24],
+          from: 3
+        }
+      ];
+      
+      expect(canWin(players[0])).to.be.ok;
+      expect(hasPoint(players[0])).to.be.ok;
+    });
+
+    it('碰的牌有翻牌', function() {
+      players[0].handTiles = [2, 3, 4, 9, 9, 14, 15, 16];
+      players[0].flowerTiles = [];
+      players[0].chowTiles = [
+        {
+          type: ClaimType.Pong,
+          tiles: [22, 22, 22],
+          from: 2
+        },
+        {
+          type: ClaimType.Pong,
+          tiles: [31, 31, 31],
+          from: 3
+        }
+      ];
+      
+      expect(canWin(players[0])).to.be.ok;
+      expect(hasPoint(players[0])).to.be.ok;
+    });
+
+    it('手牌有翻牌', function() {
+      players[0].handTiles = [2, 3, 4, 9, 9, 43, 43, 43];
+      players[0].flowerTiles = [];
+      players[0].chowTiles = [
+        {
+          type: ClaimType.Pong,
+          tiles: [22, 22, 22],
+          from: 2
+        },
+        {
+          type: ClaimType.Chow,
+          tiles: [22, 23, 24],
+          from: 3
+        }
+      ];
+      
+      expect(canWin(players[0])).to.be.ok;
+      expect(hasPoint(players[0])).to.be.ok;
+    });
+
+    it('有花', function() {
+      players[0].handTiles = [2, 3, 4, 9, 9, 14, 15, 16];
+      players[0].flowerTiles = [51];
+      players[0].chowTiles = [
+        {
+          type: ClaimType.Pong,
+          tiles: [22, 22, 22],
+          from: 2
+        },
+        {
+          type: ClaimType.Chow,
+          tiles: [22, 23, 24],
+          from: 3
+        }
+      ];
+
+      expect(canWin(players[0])).to.be.ok;
+      expect(hasPoint(players[0])).to.be.ok;
+    });
+
+    it('手里有三张，但做眼了', function() {
+      players[0].handTiles = [7, 8, 9, 9, 9, 14, 15, 16];
+      players[0].flowerTiles = [];
+      players[0].chowTiles = [
+        {
+          type: ClaimType.Chow,
+          tiles: [21, 22, 23],
+          from: 3
+        },
+        {
+          type: ClaimType.Chow,
+          tiles: [22, 23, 24],
+          from: 3
+        }
+      ];
+      
+      expect(canWin(players[0])).to.be.ok;
+      expect(hasPoint(players[0])).to.be.ok;
+    });
+  });
+
+  describe('has no point', () => {
+    it('碰，没番', function() {
+      players[0].handTiles = [2, 3, 4, 9, 9, 14, 15, 16];
+      players[0].flowerTiles = [];
+      players[0].chowTiles = [
+        {
+          type: ClaimType.Pong,
+          tiles: [22, 22, 22],
+          from: 2
+        },
+        {
+          type: ClaimType.Chow,
+          tiles: [22, 23, 24],
+          from: 3
+        }
+      ];
+
+      expect(canWin(players[0])).to.be.ok;
+      expect(hasPoint(players[0])).to.not.be.ok;
+    });
+
+    it('手里有三张，没番', function() {
+      players[0].handTiles = [2, 3, 4, 9, 9, 33, 33, 33];
+      players[0].flowerTiles = [];
+      players[0].chowTiles = [
+        {
+          type: ClaimType.Chow,
+          tiles: [21, 22, 23],
+          from: 2
+        },
+        {
+          type: ClaimType.Chow,
+          tiles: [22, 23, 24],
+          from: 3
+        }
+      ];
+      
+      expect(canWin(players[0])).to.be.ok;
+      expect(hasPoint(players[0])).to.not.be.ok;
+    });
+
+    it('只吃不碰，对子是翻牌', function() {
+      players[0].handTiles = [2, 3, 4, 16, 17, 18, 45, 45];
+      players[0].flowerTiles = [];
+      players[0].chowTiles = [
+        {
+          type: ClaimType.Chow,
+          tiles: [21, 22, 23],
+          from: 2
+        },
+        {
+          type: ClaimType.Chow,
+          tiles: [22, 23, 24],
+          from: 3
+        }
+      ];
+      
+      expect(canWin(players[0])).to.be.ok;
+      expect(hasPoint(players[0])).to.not.be.ok;
     });
   });
 });

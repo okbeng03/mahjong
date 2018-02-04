@@ -4,7 +4,7 @@ import { MeldDetail, Meld } from './meld';
 import Round from './round';
 import Wall from './wall';
 import { sortTiles, ClaimType, Card } from './tile';
-import { canWin, canReadyHand, canClaim, canKong, canFlowerWin } from './rules/basic';
+import { canWin, canReadyHand, canClaim, canKong, canFlowerWin, hasPoint } from './rules/basic';
 import { BonusType, WinType } from './rules/bonus';
 
 // 玩家
@@ -37,6 +37,7 @@ export default class PlayerDetail extends Player {
   discardClaim: boolean;  // 出牌行动标识: 前台行动使用
   
   isBanker: boolean;  // 是否庄家
+  hasPoint: boolean;  // 是否有番
 
   constructor(id: number, name: string, pick: number) {
     super(id, name, pick);
@@ -62,6 +63,7 @@ export default class PlayerDetail extends Player {
     this.fourMeld = -1;
 
     this.discardClaim = false;
+    this.hasPoint = false;
   }
 
   // 开始
@@ -149,7 +151,7 @@ export default class PlayerDetail extends Player {
     this.melds = [];
     let melds: Meld[] = [];
 
-    if (this.canWin && this.checkWin(tile)) {
+    if (this.checkWin(tile) && hasPoint(this)) {
       melds.push({
         type: ClaimType.Win,
         tiles: []

@@ -1,7 +1,7 @@
 // 基础规则
 import * as _ from 'lodash';
 import Player from '../playerDetail';
-import { Meld } from '../meld';
+import { Meld, MeldDetail } from '../meld';
 import { Card, ClaimType, sortTiles } from '../tile';
 import { assembly, eyeAssembly } from '../table/data';
 
@@ -68,10 +68,122 @@ export function canFlowerWin(tiles: number[], tile: number): number {
   return 0;
 }
 
+const dragon = [Card.Green, Card.Red, Card.White];
+const pointEye = [2, 5, 8];
+
+// 是否有番
+export function hasPoint(player: Player): boolean {
+  if (player.hasPoint) {
+    return true;
+  }
+
+  // 判断门前清
+  if (!player.chowTiles.length) {
+    return true;
+  }
+
+  const pick = player.pick;
+  const order = player.round.game.order;
+  const banker = player.round.game.banker;
+  const point = (pick + 4 - banker) % 4 + 1;
+
+  // 判断花
+  if (player.flowerTiles.length && _.findIndex(player.flowerTiles, tile => (tile - 50) % 4 === point) > -1) {
+    player.hasPoint = true;
+    return true;
+  }
+
+  const dragonTiles = dragon.slice().concat([(point - 1) * 2 + 31, (order - 1) * 2 + 31]);
+  let needPoint = false;
+  let len = player.chowTiles.length;
+
+  // 判断吃的牌是否有三张相同的红中、发财、白板或者令牌，四条有番
+  if (len) {
+    for (let i = 0; i < len; i++) {
+      const meld: MeldDetail = player.chowTiles[i];
+
+      if (meld.type === ClaimType.Pong && dragonTiles.indexOf(meld.tiles[0]) > -1) {
+        player.hasPoint = true;
+        break;
+      }
+
+      if (meld.type === ClaimType.ConcealedKong || meld.type === ClaimType.Expose) {
+        player.hasPoint = true;
+        break;
+      }
+
+      // 有碰，需要番
+      if (meld.type === ClaimType.Pong) {
+        needPoint = true;
+      }
+    }
+
+    if (player.hasPoint) {
+      return true;
+    }
+  }
+
+  const eye = player.eye[0][0];
+  const groups = _.groupBy(player.handTiles, function(tile) {
+    return tile / 1;
+  });
+  
+  // 对子是中、发、白，需要番
+  if (!needPoint) {
+    if (dragonTiles.indexOf(eye) > -1) {
+      needPoint = true;
+    }
+  }
+
+  let hasPoint = false;
+  const keys = Object.keys(groups);
+
+  // 手牌有三张相同的，需要番
+  if (!needPoint) {  
+    for (let j = 0, kLen = keys.length; j < kLen; j++) {
+      const group = groups[keys[j]];
+
+      if (group.length === 3 && group[0] !== eye) {
+        needPoint = true;
+        continue;
+      }
+
+      if (group.length === 3 && dragonTiles.indexOf(group[0]) > -1) {
+        hasPoint = true;
+      }
+    }
+  }
+
+  if (needPoint) {
+    for (let j = 0, kLen = keys.length; j < kLen; j++) {
+      const group = groups[keys[j]];
+
+      if (group.length === 3 && dragonTiles.indexOf(group[0]) > -1) {
+        hasPoint = true;
+        break;
+      }
+    }
+
+    // 258
+    // 手牌有三张相同的红中、发财、白板或者令牌
+    if ((eye < Card.East && pointEye.indexOf(eye % 10) > -1) || hasPoint) {
+      return true;
+    }
+  } else {
+    return true;
+  }
+
+  return false;
+}
+
 // 检查牌成组的牌
 function checkMelds(tiles: number[], player?: Player): number[] {
   const orderGroups = groupByOrder(tiles, 1);
   let remainTiles: number[] = [];
+
+  if (player) {
+    player.eye = [];
+  }
 
   orderGroups.forEach(function(group) {
     const len = group.length;

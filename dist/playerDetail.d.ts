@@ -28,6 +28,7 @@ export default class PlayerDetail extends Player {
     melds: Meld[];
     discardClaim: boolean;
     isBanker: boolean;
+    hasPoint: boolean;
     constructor(id: number, name: string, pick: number);
     start(round: Round, isBanker: boolean): void;
     openHand(): void;
