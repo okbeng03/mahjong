@@ -15,6 +15,11 @@ export default class Wall {
     return this.tiles.length < 16;
   }
 
+  // 海底包牌
+  willDead(): boolean {
+    return this.tiles.length >= 16 && this.tiles.length <= 19;
+  }
+
   // 摸牌
   deal(): number {
     if (this.isDead()) {

@@ -76,3 +76,19 @@ describe('is dead', () => {
     expect(wall.isDead()).to.not.be.ok;
   });
 });
+
+describe('will dead', () => {
+  it('will dead', function() {
+    const wall = new Wall();
+    wall.tiles.length = 19;
+
+    expect(wall.willDead()).to.be.ok;
+  });
+
+  it('is not dead', function() {
+    const wall = new Wall();
+    wall.tiles.length = 20;
+
+    expect(wall.willDead()).to.not.be.ok;
+  });
+});

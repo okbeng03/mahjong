@@ -74,6 +74,10 @@ export function calculate(round: Round): void {
     isBaoPai = winner.threeMeld;
   }
 
+  if (round.wall.willDead()) {
+    isBaoPai = winner.winFrom;
+  }
+
   // 包牌
   if (isBaoPai > -1) {
     compute(players, banker, bankerCount);

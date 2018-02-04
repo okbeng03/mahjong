@@ -17898,6 +17898,7 @@ function getSequence(tiles, tile) {
 }
 //# sourceMappingURL=basic.js.map
 
+// 胡牌类型
 var WinType;
 (function (WinType) {
     WinType[WinType["CommonHand"] = 1] = "CommonHand";
@@ -17941,11 +17942,6 @@ var thirteenOrphans$1 = [
     Card.White
 ];
 
-// 计算分数
-
-//# sourceMappingURL=bonus.js.map
-
-// 玩家
 var PlayerDetail = /** @class */ (function (_super) {
     __extends(PlayerDetail, _super);
     function PlayerDetail(id, name, pick) {
@@ -18229,6 +18225,8 @@ var PlayerDetail = /** @class */ (function (_super) {
     };
     return PlayerDetail;
 }(Player));
+
+//# sourceMappingURL=playerDetail.js.map
 
 //# sourceMappingURL=main.js.map
 //# sourceMappingURL=mahjong.js.map
