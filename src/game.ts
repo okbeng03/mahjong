@@ -21,7 +21,7 @@ export default class Game {
   }
 
   // 添加玩家
-  addPlayer(id: number, name: string): void {
+  addPlayer(id: number, name: string, isAI: boolean = false): void {
     const len = this.players.length;
 
     if (len >= 4) {
@@ -29,7 +29,7 @@ export default class Game {
       return;
     }
 
-    const player = new Player(id, name, len);
+    const player = new Player(id, name, len, isAI);
     this.players.push(player);
   }
 
@@ -70,7 +70,7 @@ export default class Game {
       }
 
       // 下一局
-      this.start();
+      // this.start();
     }
   }
   
