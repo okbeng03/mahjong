@@ -298,7 +298,7 @@ function checkKong(player: Player, players: Player[], cannons: number[]): void {
       cannons[meld.from] -= 1;
     }
 
-    if (meld.type === ClaimType.ConcealedKong) {
+    if (meld.type === ClaimType.ConcealedKong || meld.type === ClaimType.ExposeSelfDraw) {
       player.score += 2;
       player.bonus.push(BonusType.ConcealedKong);
     }
