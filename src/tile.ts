@@ -56,6 +56,7 @@ export enum ClaimType {
   Chow,           // 吃
   Pong,           // 碰
   Expose,         // 明杠
+  ExposeSelfDraw, // 明杠暗杠
   ConcealedKong,  // 暗杠
   Flower,         // 花胡
   Win,            // 胡
