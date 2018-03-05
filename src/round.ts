@@ -1,9 +1,10 @@
 import * as _ from 'lodash';
 import Game from './game';
 import Player from './playerDetail';
+import AI from './ai/basic';
 import Wall from './wall';
 import { calculate, BonusType } from './rules/bonus';
-import { ClaimType } from './tile';
+import { ClaimType, batchTilesSuit } from './tile';
 
 const defaultOrder = [0, 1, 2, 3];
 
@@ -22,7 +23,7 @@ export default class Round {
     this.game = game;
     this.players = [];
     game.players.forEach((player) => {
-      this.addPlayer(player.id, player.name, player.pick);
+      this.addPlayer(player.id, player.name, player.pick, player.isAI);
     });
     this.claims = [-1, -1, -1, -1];
     this.canClaims = [0, 0, 0, 0];
@@ -30,8 +31,8 @@ export default class Round {
     this.winner = -1;
   }
 
-  addPlayer(id: number, name: string, pick: number): void {
-    const player = new Player(id, name, pick);
+  addPlayer(id: number, name: string, pick: number, isAI: boolean = false): void {
+    const player = isAI ? new AI(id, name, pick) : new Player(id, name, pick);
     this.players.push(player);
   }
 
@@ -40,23 +41,24 @@ export default class Round {
     this.wall = new Wall();
     const banker = this.game.banker;
     const order = defaultOrder.slice(banker).concat(defaultOrder.slice(0, banker));
+    this.player = banker;
 
     order.forEach((pick, i) => {
       this.players[pick].start(this, !i);
     });
-
-    this.player = banker;
   }
 
   // 结束
   finish(player: number) {
     this.winner = player;
+    console.log('win', this.winner, batchTilesSuit(this.players[player].handTiles), this.players[player].chowTiles, this.players[player].bonus);
     calculate(this);
     this.game.finish();
   }
 
   // 流局
   draw() {
+    console.log('draw', '---------');
     this.winner = this.game.banker;
     this.game.finish();
   }
@@ -84,7 +86,7 @@ export default class Round {
   claim(player: number, claim: ClaimType) {
     this.firstFlow = 0; // 有人行动，就不会形成首张被跟
     this.claims[player] = claim;
-
+console.log('player claim', this.players[player].name, this.canClaims, this.claims);
     // 所有玩家都行动完，检查谁可以行动
     if (_.pull(this.canClaims.slice(), 0).length === _.pull(this.claims.slice(), -1).length) {
       // 如果大家都不行动
@@ -93,20 +95,36 @@ export default class Round {
         this.canClaims = [0, 0, 0, 0];
         this.next();
       } else {
-        player = this.claims.indexOf(_.max(this.claims));
-        this.players[this.player].tranfer();
-        this.players[player].action(this.player);
-        this.player = player;
+        const idx = _.max(this.claims);
+
+        if (idx) {
+          player = this.claims.indexOf(idx);
+          this.players[this.player].tranfer();
+          this.players[player].action(this.player);
+          this.player = player;
+        }
 
         this.claims = [-1, -1, -1, -1];
         this.canClaims = [0, 0, 0, 0];
+
+        if (!idx) {
+          this.next();
+        }
       }
     }
   }
 
   // 谁行动
   next() {
+    if (this.winner > -1) {
+      return;
+    }
+
     this.player = this.getNext();
+    console.log('next player', this.players[this.player].name, '-------------');
+    this.players.forEach(player => {
+      console.log(player.name, batchTilesSuit(player.handTiles), '---', batchTilesSuit(player.discardTiles), '---', batchTilesSuit(player.flowerTiles), player.chowTiles);
+    })
     this.players[this.player].deal();
   }
 
