@@ -5,7 +5,7 @@ const basicRule = rewire('../src/rules/basic');
 import Game from '../src/game';
 import Round from '../src/round';
 import Player from '../src/playerDetail';
-import { canClaim, canKong, groupSize, groupByType, canReadyHand, canFlowerWin, canWin, hasPoint } from '../src/rules/basic';
+import { canClaim, canKong, groupSize, groupByType, groupByOrder, canReadyHand, canFlowerWin, canWin, hasPoint } from '../src/rules/basic';
 
 describe('remain02', () => {
   const remain02 = basicRule.__get__('remain02');
@@ -146,8 +146,6 @@ describe('group size length', () => {
 });
 
 describe('group by order', () => {
-  const groupByOrder = basicRule.__get__('groupByOrder');
-
   it ('group by order', function() {
     expect(groupByOrder(batchTilesId('一万,四万,五万,七万,九万'), 1)).to.eql([
       [1],
