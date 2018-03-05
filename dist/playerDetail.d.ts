@@ -29,7 +29,7 @@ export default class PlayerDetail extends Player {
     discardClaim: boolean;
     isBanker: boolean;
     hasPoint: boolean;
-    constructor(id: number, name: string, pick: number);
+    constructor(id: number, name: string, pick: number, isAI?: boolean);
     start(round: Round, isBanker: boolean): void;
     openHand(): void;
     deal(): void;
@@ -43,7 +43,8 @@ export default class PlayerDetail extends Player {
     private win(type);
     private check(tile, isDraw);
     private checkWin(tile, bySelf?);
-    private checkFlower(tile?);
+    private checkFlower();
     private openCheck();
     private sort();
+    private pull(meld);
 }

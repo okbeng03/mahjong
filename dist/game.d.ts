@@ -8,7 +8,7 @@ export default class Game {
     bankerCount: number;
     bonus: number[];
     constructor();
-    addPlayer(id: number, name: string): void;
+    addPlayer(id: number, name: string, isAI?: boolean): void;
     start(): void;
     finish(): void;
     end(): void;

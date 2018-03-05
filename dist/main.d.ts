@@ -1,4 +1,7 @@
-import './tile';
-import './player';
-import './playerDetail';
-import './rules/basic';
+import Player from './playerDetail';
+import Game from './game';
+declare const _default: {
+    Player: typeof Player;
+    Game: typeof Game;
+};
+export default _default;

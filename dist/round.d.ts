@@ -12,7 +12,7 @@ export default class Round {
     canClaims: number[];
     firstFlow: number;
     constructor(game: Game);
-    addPlayer(id: number, name: string, pick: number): void;
+    addPlayer(id: number, name: string, pick: number, isAI?: boolean): void;
     start(): void;
     finish(player: number): void;
     draw(): void;
