@@ -3,7 +3,7 @@ import Player from './player';
 import { MeldDetail, Meld } from './meld';
 import Round from './round';
 import Wall from './wall';
-import { sortTiles, ClaimType, Card } from './tile';
+import { sortTiles, ClaimType, Card, batchTilesSuit } from './tile';
 import { canWin, canReadyHand, canClaim, canKong, canFlowerWin, hasPoint } from './rules/basic';
 import { BonusType, WinType } from './rules/bonus';
 
@@ -39,8 +39,8 @@ export default class PlayerDetail extends Player {
   isBanker: boolean;  // 是否庄家
   hasPoint: boolean;  // 是否有番
 
-  constructor(id: number, name: string, pick: number) {
-    super(id, name, pick);
+  constructor(id: number, name: string, pick: number, isAI: boolean = false) {
+    super(id, name, pick, isAI);
 
     this.handTiles = [];
     this.discardTiles = [];
@@ -62,6 +62,7 @@ export default class PlayerDetail extends Player {
     this.threeMeld = -1;
     this.fourMeld = -1;
 
+    this.melds = [];
     this.discardClaim = false;
     this.hasPoint = false;
   }
@@ -76,7 +77,9 @@ export default class PlayerDetail extends Player {
 
     // 补花
     if (isBanker) {
-      this.openCheck();
+      setTimeout(() => {
+        this.openCheck();
+      }, 0);
     }
   }
 
@@ -84,14 +87,11 @@ export default class PlayerDetail extends Player {
   openHand(): void {
     this.handTiles = this.wall.openHand(this.isBanker);
     this.sort();
+    console.log('open', this.name, batchTilesSuit(this.handTiles));
   }
 
   // 抽牌
   deal(): void {
-    if (!this.hasDiscard) {
-      this.checkFlower();
-    }
-
     this.discardClaim = true;
     const tile = this.wall.deal();
 
@@ -115,6 +115,11 @@ export default class PlayerDetail extends Player {
     }
 
     this.handTiles.push(tile);
+
+    if (this.handTiles.length % 3 !== 2) {
+      return;
+    }
+
     this.check(tile, true);
   }
 
@@ -125,7 +130,6 @@ export default class PlayerDetail extends Player {
     this.handTiles.splice(i, 1)[0];
     this.discardTiles.push(tile);
     this.sort();
-    this.round.check(tile);
     this.hasDiscard = true;
 
     const keys = Object.keys(this.readyHand);
@@ -139,6 +143,8 @@ export default class PlayerDetail extends Player {
     } else {
       this.readyHandTiles = [];
     }
+
+    this.round.check(tile);
   }
 
   // 出的牌被别人吃的，要移交给别人
@@ -165,6 +171,7 @@ export default class PlayerDetail extends Player {
         type: ClaimType.None,
         tiles: []
       });
+
       this.melds = melds;
     }
 
@@ -174,11 +181,13 @@ export default class PlayerDetail extends Player {
   // 玩家选择行动
   claim(idx: number) {
     this.meld = this.melds[idx];
-
-    if (this.pick === this.round.player) {
-      this.action(-1);
-    } else {
-      this.round.claim(this.pick, this.meld.type);
+console.log('claim', this.name, idx, this.melds);
+    if (this.meld) {
+      if (this.pick === this.round.player) {
+        this.action(-1);
+      } else {
+        this.round.claim(this.pick, this.meld.type);
+      }
     }
   }
 
@@ -188,7 +197,7 @@ export default class PlayerDetail extends Player {
       ...this.meld,
       from: from  // -1表示自己
     };
-
+console.log('action', this.name, meld);
     switch(meld.type) {
       // 胡牌，结束
       case ClaimType.Win:
@@ -202,20 +211,28 @@ export default class PlayerDetail extends Player {
       // 杠
       case ClaimType.ConcealedKong:
       case ClaimType.Expose:
-        _.pull(this.handTiles, ...meld.tiles.slice(0, -1));
+        this.pull(meld);
         this.chowTiles.push(meld);
+        this.checkBaoPai();
+        this.draw();
+        break;
+      // 碰牌杠
+      case ClaimType.ExposeSelfDraw:
         this.checkBaoPai();
         this.draw();
         break;
       // 碰、胡
       case ClaimType.Chow:
       case ClaimType.Pong:
-        _.pull(this.handTiles, ...meld.tiles.slice(0, -1));
+        this.pull(meld);
         this.chowTiles.push(meld);
         this.checkBaoPai();
         this.discardClaim = true;
         break;
     }
+
+    // 吃完牌后检查是否听牌
+    canReadyHand(this);
   }
 
   // 判断是否包牌
@@ -268,8 +285,8 @@ export default class PlayerDetail extends Player {
   private check(tile: number, isDraw: boolean): void {
     this.melds = [];
 
-    if (tile >= Card.Spring) {
-      this.checkFlower(tile);
+    if (sortTiles(this.handTiles.slice()).slice(-1)[0] >= Card.Spring) {
+      this.checkFlower();
       return;
     }
 
@@ -284,6 +301,19 @@ export default class PlayerDetail extends Player {
 
     melds = melds.concat(canKong(this.handTiles, tile));
 
+    for (let i = 0, len = this.chowTiles.length; i < len; i++) {
+      const meld = this.chowTiles[i];
+
+      if (meld.type === ClaimType.Pong && meld.tiles[0] === tile) {
+        meld.tiles = [tile, tile, tile, tile];
+        meld.type = ClaimType.ExposeSelfDraw;
+        melds.push({
+          type: ClaimType.ExposeSelfDraw,
+          tiles: []
+        });
+      }
+    }
+
     if (melds.length) {
       this.melds = melds;
       return;
@@ -294,12 +324,8 @@ export default class PlayerDetail extends Player {
 
   // 胡牌
   private checkWin(tile: number, bySelf: boolean = false): boolean {
-    if (this.hasDiscard) {
-      if (this.readyHandTiles.length && this.readyHandTiles.indexOf(tile) > -1) {
-        // 再检查下是否能胡
-        return bySelf ? canWin(this) : canWin(this, tile);
-      }
-    } else {
+    if (!this.hasDiscard || (this.readyHandTiles.length && this.readyHandTiles.indexOf(tile) > -1)) {
+      // 再检查下是否能胡
       return bySelf ? canWin(this) : canWin(this, tile);
     }
 
@@ -307,19 +333,23 @@ export default class PlayerDetail extends Player {
   }
 
   // 补花
-  private checkFlower(tile?: number): void {
+  private checkFlower(): void {
     let tiles: number[] = [];
+    const handTiles = sortTiles(this.handTiles.slice());
 
-    if (tile) {
-      tiles = [tile];
-      this.handTiles.splice(-1, 1);
-    } else {
-      let idx = _.findIndex(this.handTiles, tile => tile >= Card.Spring);
-      
-      if (idx > -1) {
-        tiles = this.handTiles.splice(idx, this.handTiles.length - idx);
-      }
+    let idx = _.findIndex(handTiles, tile => tile >= Card.Spring);
+    
+    if (idx > -1) {
+      tiles = handTiles.splice(idx, handTiles.length - idx);
     }
+
+    if (!tiles.length) {
+      return;
+    }
+
+    tiles.forEach(tile => {
+      this.handTiles.splice(this.handTiles.indexOf(tile), 1);
+    });
 
     tiles.forEach(tile => {
       if (tile >= Card.Spring) {
@@ -365,9 +395,26 @@ export default class PlayerDetail extends Player {
     }
 
     this.checkFlower();
+    canReadyHand(this);
   }
 
   private sort(): void {
     this.handTiles = sortTiles(this.handTiles);
+  }
+
+  private pull(meld: MeldDetail): void {
+    const type = meld.type;
+    const tiles = meld.tiles.slice(0, -1);
+    const handTiles = this.handTiles;
+
+    if (type === ClaimType.Expose || type === ClaimType.ConcealedKong) {
+      _.pull(handTiles, ...tiles);
+
+      return;
+    }
+    
+    tiles.forEach(tile => {
+      handTiles.splice(handTiles.indexOf(tile), 1);
+    });
   }
 };
