@@ -16,5 +16,8 @@ export default {
     typescript({
       tsconfig: 'build/tsconfig.json'
     })
-  ]
+  ],
+  external: [
+		'lodash'
+	]
 };
