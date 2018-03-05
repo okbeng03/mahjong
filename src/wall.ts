@@ -26,7 +26,7 @@ export default class Wall {
       return -1;
     }
 
-    return this.tiles.shift();
+    return this.tiles.shift() || -1;
   }
 
   // 花杠
@@ -35,6 +35,6 @@ export default class Wall {
       return -1;
     }
 
-    return this.tiles.pop();
+    return this.tiles.pop() || -1;
   }
 };
