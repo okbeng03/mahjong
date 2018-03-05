@@ -33,6 +33,23 @@ export function canWin(player: Player, tile: number = 0): boolean {
   
   const remainTiles = checkMelds(tiles, player);
 
+  if (remainTiles.length && player.handTiles.length === 14) {
+    // 七小对，十三幺
+    const readyTiles = checkPair(player.handTiles);
+
+    if (!readyTiles.length) {
+      return true;
+    }
+
+    const readyTile = checkUniq(player.handTiles);
+
+    if (readyTile === 0) {
+      return true;
+    }
+  }
+
+  player.remainTiles = remainTiles;
+
   return !remainTiles.length;
 }
 
@@ -217,11 +234,13 @@ function checkReadyHand(player: Player): void {
   const len = remainTiles.length;
   const eyeLen = eye.length;
 
+  player.readyHand = {};
+
   if (player.handTiles.length === 14) {
     // 七小对，十三幺
     const readyTiles = checkPair(player.handTiles);
 
-    if (readyTiles.length) {
+    if (readyTiles.length === 2) {
       player.readyHand[readyTiles[0]] = [readyTiles[1]];
       player.readyHand[readyTiles[1]] = [readyTiles[0]];
       return;
@@ -229,10 +248,14 @@ function checkReadyHand(player: Player): void {
 
     const readyTile = checkUniq(player.handTiles);
 
-    if (readyTile) {
+    if (readyTile > 0) {
       player.readyHand[readyTile] = thirteenOrphans;
       return;
     }
+  }
+
+  if (eyeLen > 2) {
+    return;
   }
 
   if (len === 1) {
@@ -241,28 +264,36 @@ function checkReadyHand(player: Player): void {
       player.readyHand[remainTiles[0]] = [eye[0][0], eye[1][0]];
     }
 
-    // if (eyeLen === 5) {
-    //   // 不可能听牌，不考虑
-    //   // 豪华七小对
-    // }
-
     return;
   }
 
+  if (eyeLen === 2) {
+    // 对碰
+    if (len === 1) {
+      player.readyHand[remainTiles[0]] = [eye[0][0], eye[1][0]];
+      return;
+    }
+
+    remainTiles.forEach((tile, idx) => {
+      const newTiles = remainTiles.slice();
+      newTiles.splice(idx, 1);
+
+      if (!checkMelds(newTiles).length) {
+        player.readyHand[tile] = [eye[0][0], eye[1][0]];
+      }
+    });
+
+    if (!_.isEmpty(player.readyHand)) {
+      return;
+    }
+  }
+
   if (len === 2) {
-    if (eyeLen === 1) {
+    if (eyeLen === 0) {
       // 单吊
       player.readyHand[remainTiles[0]] = [remainTiles[1]];
       player.readyHand[remainTiles[1]] = [remainTiles[0]];
     }
-
-    // if (eyeLen === 3) {
-    //   // 不可能听牌，不考虑
-    // }
-
-    // if (eyeLen === 6) {
-    //   // 七小对
-    // }
 
     return;
   }
@@ -284,7 +315,7 @@ function checkReadyHand(player: Player): void {
   }
 
   // 把同花色的牌一起拿出来比较，这样找才全
-  const tiles = player.handTiles;
+  const tiles = sortTiles(player.handTiles);
   typeGroups = groupByType(tiles);
   let partTiles: number[][] = [];
 
@@ -302,6 +333,23 @@ function checkReadyHand(player: Player): void {
   }
 
   player.readyHand = checkTing(partTiles);
+
+  // 如果只有用一个剩余分组，并且只有一个目，那还要判断是否存在对碰的情况
+  if (partTiles.length === 1 && eyeLen === 1 && partTiles[0].indexOf(eye[0][0]) === -1) {
+    partTiles.push(eye[0]);
+
+    const readyHand = checkTing(partTiles);
+    
+    if (!_.isEmpty(readyHand)) {
+      for (let key in readyHand) {
+        const item = player.readyHand[key];
+
+        if (typeof item !== 'undefined') {
+          player.readyHand[key] = _.union(item, readyHand[key]);
+        }
+      }
+    }
+  }
 }
 
 // 七小对
@@ -310,25 +358,19 @@ function checkPair(tiles: number[]): number[] {
   const keys = Object.keys(groups);
   const len = keys.length;
   const readyTiles = [];
-  let count = 0;
 
   if (len >= 7) {
     for (let i = 0; i < len; i++) {
       switch(groups[keys[i]].length) {
         case 3:
-        readyTiles.push(groups[keys[i]][0]);
+          readyTiles.push(groups[keys[i]][0]);
         case 2:
-          count++;
           break;
         case 1:
-        readyTiles.push(groups[keys[i]][0]);
+          readyTiles.push(groups[keys[i]][0]);
           break;
       }
     }
-  }
-
-  if (count !== 6) {
-    readyTiles.length = 0;
   }
 
   return readyTiles;
@@ -341,12 +383,14 @@ function checkUniq(tiles: number[]): number {
   if (uniqTiles.length === 14) {
     const remainTiles = _.pull(uniqTiles, ...thirteenOrphans);
 
-    if (remainTiles.length === 1) {
+    if (!remainTiles.length) {
+      return 0;
+    } else if (remainTiles.length === 1) {
       return remainTiles[0];
     }
   }
 
-  return 0;
+  return -1;
 }
 
 // 检查出一张牌，抓什么牌可以成组
@@ -361,17 +405,19 @@ function checkTing(tileGroup: number[][]): _.Dictionary<number[]> {
 
     for (let i = 0, len = tiles.length; i < len; i++) {
       const newTiles = tiles.slice();
-      const tile = newTiles.splice(i, 1);
+      const tile = newTiles.splice(i, 1)[0];
 
-      if (tile[0] === last) {
+      if (tile === last) {
         continue;
       }
 
       const tingTiles = canTing(newTiles);
 
       if (tingTiles.length) {
-        readyHand[tile[0]] = tingTiles;
+        readyHand[tile] = tingTiles;
       }
+
+      last = tile;
     }
   }
 
@@ -403,9 +449,9 @@ function checkTing(tileGroup: number[][]): _.Dictionary<number[]> {
       // 先看移除掉的组是否能成牌，能成牌才加牌
       for (let i = 0, len = tiles.length; i < len; i++) {
         const newTiles = tiles.slice();
-        const tile = newTiles.splice(i, 1);
+        const tile = newTiles.splice(i, 1)[0];
 
-        if (tile[0] === last) {
+        if (tile === last) {
           continue;
         }
         
@@ -414,10 +460,12 @@ function checkTing(tileGroup: number[][]): _.Dictionary<number[]> {
         if (!remainTiles.length) {
           const tingTiles = canTing(group[1]);
 
-          if (tingTiles) {
-            readyHand[tile[0]] = tingTiles;
+          if (tingTiles.length) {
+            readyHand[tile] = tingTiles;
           }
         }
+
+        last = tile;
       }
     });
   }
@@ -491,26 +539,47 @@ export function groupByType(tiles: number[]): _.Dictionary<number[]> {
 };
 
 // 找到指定间距的顺序分组
-function groupByOrder(tiles: number[], gap: number = 1): number[][] {
+export function groupByOrder(allTiles: number[], g: number = 1): number[][] {
+  allTiles = allTiles.slice();
+  const typeGroups = groupByType(allTiles);
   const groups: number[][] = [];
-  let lastTile = tiles.splice(0, 1)[0];
-  let group: number[] = [lastTile];
-  const len = tiles.length;
 
-  for (let i = 0; i < len; i++) {
-    let tile = tiles[i];
-
-    if (tile - lastTile <= gap) {
-      group.push(tile);
-    } else {
-      groups.push(group);
-      group = [tile];
-    }
-
-    lastTile = tile;
+  if (typeGroups.word) {
+    _group(typeGroups.word);
   }
 
-  groups.push(group);
+  if (typeGroups.character) {
+    _group(typeGroups.character, g);
+  }
+
+  if (typeGroups.dot) {
+    _group(typeGroups.dot, g);
+  }
+
+  if (typeGroups.bamboo) {
+    _group(typeGroups.bamboo, g);
+  }
+  
+  function _group(tiles: number[], gap: number = 1): void {
+    let lastTile = tiles.splice(0, 1)[0];
+    let group: number[] = [lastTile];
+    const len = tiles.length;
+
+    for (let i = 0; i < len; i++) {
+      let tile = tiles[i];
+
+      if (tile - lastTile <= gap) {
+        group.push(tile);
+      } else {
+        groups.push(group);
+        group = [tile];
+      }
+
+      lastTile = tile;
+    }
+
+    groups.push(group);
+  }
 
   return groups;
 };
