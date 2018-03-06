@@ -146,10 +146,10 @@ describe('end', () => {
     game.addPlayer(2, 'test2');
     game.addPlayer(3, 'test3');
     game.addPlayer(4, 'test4');
-    game.start();
   });
 
   it('one round', () => {
+    game.start();
     const round = game.rounds[game.rounds.length - 1];
     round.players[0].score = -1;
     round.players[1].score = 4;
@@ -163,6 +163,7 @@ describe('end', () => {
   });
 
   it('more round', () => {
+    game.start();
     const round = game.rounds[game.rounds.length - 1];
     round.players[0].score = 6;
     round.players[1].score = -2;
@@ -171,6 +172,7 @@ describe('end', () => {
 
     game.finish();
 
+    game.start();
     const round = game.rounds[game.rounds.length - 1];
     round.players[0].score = -4;
     round.players[1].score = -4;

@@ -361,7 +361,7 @@ describe('can ready hand', () => {
       canReadyHand(player);
 
       expect(player.readyHand).to.eql({
-        5: [9, 31]
+        5: [31, 9]
       });
     });
 
@@ -371,7 +371,7 @@ describe('can ready hand', () => {
       canReadyHand(player);
 
       expect(player.readyHand).to.eql({
-        1: [9, 31]
+        1: [31, 9]
       });
     });
   });
@@ -379,7 +379,7 @@ describe('can ready hand', () => {
   describe('check ready hand when has two remain', () => {
     it('check ready hand when has two remain', function() {
       const player = new Player(1, 'AI', 0);
-      player.handTiles = batchTilesId('一万,三万,四万,五万,九万,九万,东风');
+      player.handTiles = batchTilesId('一万,三万,四万,五万,九万,九万,九万,东风');
       canReadyHand(player);
 
       expect(player.readyHand).to.eql({
@@ -491,7 +491,7 @@ describe('can ready hand', () => {
 
     it('check ready hand when no ready', function() {
       const player = new Player(1, 'AI', 0);
-      player.handTiles = batchTilesId('二万,三万,四万,三筒,三筒,三筒,八条,九条');
+      player.handTiles = batchTilesId('一万,三万,四万,三筒,三筒,三筒,八条,九条');
       canReadyHand(player);
 
       expect(player.readyHand).to.eql({});

@@ -939,6 +939,7 @@ function getSequence(tiles, tile) {
     }
     return melds;
 }
+//# sourceMappingURL=basic.js.map
 
 var WinType;
 (function (WinType) {
@@ -1974,11 +1975,21 @@ var Game = /** @class */ (function () {
 
 // import './tile';
 // import './player';
+// import './rules/basic';
+// import './ai/basic';
+// const game = new Game();
+// game.addPlayer(1, 'test1', true);
+// game.addPlayer(2, 'test2', true);
+// game.addPlayer(3, 'test3', true);
+// game.addPlayer(4, 'test4', true);
+// game.start();
+// const player = new Player(1, 'AI', 0);
+// player.handTiles = [12, 12, 14, 14, 16, 17, 18, 21, 21, 22, 25, 25, 27, 29];
+// canReadyHand(player);
 var main = {
     Player: PlayerDetail,
     Game: Game
 };
-//# sourceMappingURL=main.js.map
 
 module.exports = main;
 //# sourceMappingURL=mahjong.js.map
