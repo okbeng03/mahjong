@@ -5,8 +5,12 @@ import { sortTiles, Card, ClaimType, batchTilesSuit } from '../tile';
 import { groupByOrder } from '../rules/basic';
 
 export default class PlayerAIBasic extends Player {
+  timer: number | null;
+
   constructor(id: number, name: string, pick: number) {
     super(id, name, pick, true);
+
+    this.timer = null;
   }
 
   start(round: Round, isBanker: boolean): void {
@@ -25,37 +29,38 @@ export default class PlayerAIBasic extends Player {
 
   // 抽牌
   deal(): void {
-    const flowerLen = this.flowerTiles.length;
-    const chowLen = this.chowTiles.length;
-
     super.deal();
 
-    if (flowerLen < this.flowerTiles.length || chowLen < this.chowTiles.length) {
-      return;
+    if (this.timer) {
+      clearTimeout(this.timer);
     }
 
-    if (this.melds.length) {
-      this.claimByAI();
-      return;
-    }
-
-    this.discardByAI();
+    this.timer = setTimeout(() => {
+      if (this.melds.length) {
+        this.claimByAI();
+        return;
+      }
+  
+      this.discardByAI();
+    }, 2000);
   }
 
   // 后面抽牌
   draw(): void {
     super.draw();
 
-    if (this.handTiles.length % 3 !== 2 || this.handTiles.slice(-1)[0] >= Card.Spring) {
-      return;
+    if (this.timer) {
+      clearTimeout(this.timer);
     }
 
-    if (this.melds.length) {
-      this.claimByAI();
-      return;
-    }
-
-    this.discardByAI();
+    this.timer = setTimeout(() => {
+      if (this.melds.length) {
+        this.claimByAI();
+        return;
+      }
+  
+      this.discardByAI();
+    }, 2000);
   }
 
   checkClaim(tile: number, canChow: boolean): boolean {
@@ -65,7 +70,7 @@ export default class PlayerAIBasic extends Player {
       // 延迟后响应
       setTimeout(() => {
         this.claimByAI();
-      }, 500);
+      }, 0);
     }
 
     return hasClaim;
@@ -81,18 +86,23 @@ export default class PlayerAIBasic extends Player {
     if (typeof claim !== 'undefined') {
       const idx = claims.indexOf(claim);
 
-      // 如果以听牌，不吃不碰
+      // 如果已听牌，不吃不碰
       if (claim <= ClaimType.Pong && !_.isEmpty(this.readyHand)) {
         super.claim(claims.length - 1);
         return;
       }
 
-      // 如果这不是remainTiles的牌，不吃
       if (claim === ClaimType.Chow) {
+        // 如果这不是remainTiles的牌，不吃
         const remainTiles = _.uniq(this.remainTiles.slice());
-        const union = _.union(remainTiles, melds[idx].tiles.slice(0, -1));
+        let flag = _.union(remainTiles, melds[idx].tiles.slice(0, -1)).length === remainTiles.length;
 
-        if (union.length !== remainTiles.length) {
+        if (flag) {
+          // 吃牌后不能成组的数量不能增多
+          flag = groupByOrder(this.remainTiles).length >= groupByOrder(pull(this.remainTiles, melds[idx].tiles)).length
+        }
+
+        if (!flag) {
           // 如果还有其他的吃牌组合，继续判断
           if (melds.length > 2) {
             melds.splice(0, 1);
@@ -115,7 +125,13 @@ export default class PlayerAIBasic extends Player {
         }
 
         if (this.round.player === this.pick) {
-          this.discardByAI();
+          if (this.timer) {
+            clearTimeout(this.timer);
+          }
+
+          this.timer = setTimeout(() => {
+            this.discardByAI();
+          }, 2000);
         }
       }, 500);
     }
@@ -188,6 +204,8 @@ export default class PlayerAIBasic extends Player {
             tiles = remainTiles;
           }
 
+          // TODO: 算法算出最佳听牌路径
+
           let oneAndNightTiles = _.filter(tiles, function(item) {
             const r = item % 10;
             return r === 1 || r === 9;
@@ -218,8 +236,12 @@ export default class PlayerAIBasic extends Player {
     }
 
     if (tile) {
-      console.log('discard', this.name, batchTilesSuit([tile]));
-      super.discard(tile);
+      // setTimeout(() => {
+        console.log('discard', this.name, batchTilesSuit([tile]));
+
+        this.timer = null;
+        super.discard(tile);
+      // }, 2000);
     }
   }
 
@@ -249,3 +271,13 @@ export default class PlayerAIBasic extends Player {
     return probabilities;
   }
 };
+
+function pull(tiles: number[], meld: number[]): number[] {
+  tiles = tiles.slice();
+  
+  meld.forEach(tile => {
+    tiles.splice(tiles.indexOf(tile), 1);
+  });
+
+  return tiles;
+}
