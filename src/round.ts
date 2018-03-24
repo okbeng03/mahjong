@@ -53,6 +53,8 @@ export default class Round {
     this.winner = player;
     console.log('win', this.winner, batchTilesSuit(this.players[player].handTiles), this.players[player].chowTiles, this.players[player].bonus);
     calculate(this);
+
+    this.game.action('game:finish');
     this.game.finish();
   }
 
@@ -60,6 +62,7 @@ export default class Round {
   draw() {
     console.log('draw', '---------');
     this.winner = this.game.banker;
+    this.game.action('game:draw');
     this.game.finish();
   }
 
@@ -98,10 +101,12 @@ console.log('player claim', this.players[player].name, this.canClaims, this.clai
         const idx = _.max(this.claims);
 
         if (idx) {
+          const temp = this.player;
           player = this.claims.indexOf(idx);
           this.players[this.player].tranfer();
-          this.players[player].action(this.player);
           this.player = player;
+          this.game.action('game:next');
+          this.players[player].action(temp);
         }
 
         this.claims = [-1, -1, -1, -1];
@@ -121,6 +126,7 @@ console.log('player claim', this.players[player].name, this.canClaims, this.clai
     }
 
     this.player = this.getNext();
+    this.game.action('game:next');
     console.log('next player', this.players[this.player].name, '-------------');
     this.players.forEach(player => {
       console.log(player.name, batchTilesSuit(player.handTiles), '---', batchTilesSuit(player.discardTiles), '---', batchTilesSuit(player.flowerTiles), player.chowTiles);
@@ -152,6 +158,7 @@ console.log('player claim', this.players[player].name, this.canClaims, this.clai
       if (flag) {
         if (this.firstFlow === 1) {
           this.players[this.game.banker].bonus.push(BonusType.FirstFollow);
+          this.game.action('game:firstFollow');
         }
 
         this.firstFlow--;
