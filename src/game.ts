@@ -10,6 +10,7 @@ export default class Game {
   banker: number;     // 庄家
   bankerCount: number;// 庄数
   bonus: number[];     // 分数
+  mutation: Function = function() {};
 
   constructor() {
     this.order = Pick.East;
@@ -43,6 +44,8 @@ export default class Game {
     const round = new Round(this);
     round.start();
     this.rounds.push(round);
+
+    this.action('game:start');
   }
 
   // 本局结束，进入下一局
@@ -69,6 +72,8 @@ export default class Game {
         this.bankerCount++;
       }
 
+      this.end();
+
       // 下一局
       // this.start();
     }
@@ -86,5 +91,15 @@ export default class Game {
         bonus[i] += player.score;
       });
     });
+
+    // this.action('game:end');
+  }
+
+  action(type: string, data?: any) {
+    this.mutation(type, data);
+  }
+
+  subscribe(cb: Function): void {
+    this.mutation = cb;
   }
 };
