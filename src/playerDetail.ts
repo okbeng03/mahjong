@@ -1,6 +1,7 @@
 import * as _ from 'lodash';
 import Player from './player';
 import { MeldDetail, Meld } from './meld';
+import Game from './game';
 import Round from './round';
 import Wall from './wall';
 import { sortTiles, ClaimType, Card, batchTilesSuit } from './tile';
@@ -23,6 +24,7 @@ export default class PlayerDetail extends Player {
   remainTiles: number[];  // 没成组的牌
 
   round: Round;
+  game: Game;
   wall: Wall;
 
   score: number;    // 分数
@@ -70,6 +72,7 @@ export default class PlayerDetail extends Player {
   // 开始
   start(round: Round, isBanker: boolean): void {
     this.round = round;
+    this.game = round.game;
     this.wall = round.wall;
     this.isBanker = isBanker;
     this.discardClaim = isBanker;
@@ -101,6 +104,7 @@ export default class PlayerDetail extends Player {
     }
 
     this.handTiles.push(tile);
+    this.game.action('player:deal');
     this.check(tile, false);
   }
 
@@ -115,7 +119,8 @@ export default class PlayerDetail extends Player {
     }
 
     this.handTiles.push(tile);
-
+    this.game.action('player:draw');
+    
     if (this.handTiles.length % 3 !== 2) {
       return;
     }
@@ -131,6 +136,7 @@ export default class PlayerDetail extends Player {
     this.discardTiles.push(tile);
     this.sort();
     this.hasDiscard = true;
+    this.game.action('player:discard');
 
     const keys = Object.keys(this.readyHand);
 
@@ -173,6 +179,7 @@ export default class PlayerDetail extends Player {
       });
 
       this.melds = melds;
+      this.game.action('player:check', this.pick);
     }
 
     return !!melds.length;
@@ -201,6 +208,7 @@ console.log('action', this.name, meld);
     switch(meld.type) {
       // 胡牌，结束
       case ClaimType.Win:
+        this.handTiles.push(meld.tiles[2]);
       case ClaimType.SelfDraw:
       case ClaimType.Kong:
         let type = ClaimType[meld.type] as keyof typeof BonusType;
@@ -214,11 +222,14 @@ console.log('action', this.name, meld);
         this.pull(meld);
         this.chowTiles.push(meld);
         this.checkBaoPai();
+        this.game.action('player:kong');
         this.draw();
         break;
       // 碰牌杠
       case ClaimType.ExposeSelfDraw:
+        this.exposeSelefDraw(meld.tiles[0]);
         this.checkBaoPai();
+        this.game.action('player:kong');
         this.draw();
         break;
       // 碰、胡
@@ -228,6 +239,7 @@ console.log('action', this.name, meld);
         this.chowTiles.push(meld);
         this.checkBaoPai();
         this.discardClaim = true;
+        this.game.action('player:chow');
         break;
     }
 
@@ -305,17 +317,23 @@ console.log('action', this.name, meld);
       const meld = this.chowTiles[i];
 
       if (meld.type === ClaimType.Pong && meld.tiles[0] === tile) {
-        meld.tiles = [tile, tile, tile, tile];
-        meld.type = ClaimType.ExposeSelfDraw;
         melds.push({
           type: ClaimType.ExposeSelfDraw,
-          tiles: []
+          tiles: [tile, tile, tile, tile]
         });
+        
+        break;
       }
     }
 
     if (melds.length) {
+      melds.push({
+        type: ClaimType.None,
+        tiles: []
+      });
+      
       this.melds = melds;
+      this.game.action('player:check', this.pick);
       return;
     }
 
@@ -330,6 +348,21 @@ console.log('action', this.name, meld);
     }
 
     return false;
+  }
+
+  // 碰牌杠
+  private exposeSelefDraw(tile: number): void {
+    for (let i = 0, len = this.chowTiles.length; i < len; i++) {
+      const meld = this.chowTiles[i];
+
+      if (meld.type === ClaimType.Pong && meld.tiles[0] === tile) {
+        meld.tiles = [tile, tile, tile, tile];
+        meld.type = ClaimType.ExposeSelfDraw;
+        this.handTiles.splice(-1, 1);
+        
+        break;
+      }
+    }
   }
 
   // 补花
@@ -353,9 +386,9 @@ console.log('action', this.name, meld);
 
     tiles.forEach(tile => {
       if (tile >= Card.Spring) {
+        this.draw();
         this.flowerTiles.push(tile);
         this.flowerTiles = sortTiles(this.flowerTiles);
-        this.draw();
         const count = canFlowerWin(this.flowerTiles, tile);
   
         if (count) {
@@ -363,6 +396,8 @@ console.log('action', this.name, meld);
         }
       }
     });
+
+    this.game.action('player:flower');
   }
 
   private openCheck(): void {
